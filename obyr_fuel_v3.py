@@ -157,7 +157,7 @@ if not petro_df.empty:
     petro_df["Station_Name"] = petro_df["Station_Name"].astype(str).str.strip().str.upper()
     petro_df["Province"] = petro_df["Province"].astype(str).str.strip().str.upper()
     petro_df["Network"] = "Petro"
-    # Gentle merge - only upper and strip, no aggressive cleaning
+    # Simple matching - only upper and strip (what worked before phone column)
     petro_df = petro_df.merge(master_petro[["Station_Name", "Address", "Latitude", "Longitude"]], on="Station_Name", how="left")
 
 if not esso_prices.empty:
@@ -229,7 +229,7 @@ styled_df = display_df.style.format({
 
 st.dataframe(styled_df, width="stretch", hide_index=True)
 
-# Banners below table only
+# Banners only below the table
 if petro_path:
     st.success(f"✅ Loaded Petro prices: {os.path.basename(petro_path)}")
 if esso_path:
