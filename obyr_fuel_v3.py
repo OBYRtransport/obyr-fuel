@@ -7,7 +7,7 @@ from datetime import datetime
 from geopy.geocoders import Nominatim
 from streamlit_geolocation import streamlit_geolocation
 
-# ====================== PATHS (Render-friendly) ======================
+# ====================== PATHS (works on Render + local) ======================
 BASE_DIR = os.getcwd()
 DRIVER_MASTER = os.path.join(BASE_DIR, "Locations", "driver_master.csv")
 LOGO_PATH = os.path.join(BASE_DIR, "obyr_logo.png")
@@ -53,18 +53,6 @@ if not st.session_state.logged_in:
 # ====================== MAIN APP ======================
 st.success(f"✅ Logged in as **{st.session_state.driver_name}**")
 
-# ====================== DEBUG SECTION (expand this) ======================
-with st.expander("🔍 DEBUG — Click to see what Render sees", expanded=True):
-    st.write("**Current working directory:**", BASE_DIR)
-    st.write("**Files in root:**", os.listdir(BASE_DIR))
-    locations_path = os.path.join(BASE_DIR, "Locations")
-    if os.path.exists(locations_path):
-        st.write("**Files in Locations folder:**", os.listdir(locations_path))
-        st.write("**driver_master.csv exists?**", os.path.exists(DRIVER_MASTER))
-    else:
-        st.error("Locations folder not found!")
-
-# (rest of your app continues below)
 def haversine(lat1, lon1, lat2, lon2):
     if lat1 is None or lon1 is None or lat2 is None or lon2 is None:
         return np.full_like(lat2, 0.0) if hasattr(lat2, "__len__") else 0.0
@@ -92,9 +80,10 @@ st.set_page_config(page_title="OBYR Fuel V3.8", page_icon="⛽", layout="wide")
 st.subheader("Official Dual Network")
 st.caption("✅ Auto-loads latest prices • Address search + GPS")
 
-# Address + GPS (unchanged)
+# Address + GPS
 st.sidebar.header("📍 My Current Location")
-current_address = st.sidebar.text_input("Current Address", placeholder="279 Belfield Rd, Etobicoke, ON")
+current_address = st.sidebar.text_input("Current Address", placeholder="Enter address or city")
+
 if st.sidebar.button("📍 Get My Current GPS Location"):
     loc = streamlit_geolocation()
     if loc and loc.get("latitude"):
@@ -197,7 +186,7 @@ if prices_df.empty:
     st.warning("No price files found. Please run the helpers first.")
     st.stop()
 
-# Calculations (unchanged)
+# Calculations
 prices_df["Address"] = prices_df.get("Address", pd.Series(["Address missing"] * len(prices_df))).fillna("Address missing")
 prices_df["Latitude"] = pd.to_numeric(prices_df.get("Latitude", pd.Series([0.0] * len(prices_df))), errors="coerce").fillna(0)
 prices_df["Longitude"] = pd.to_numeric(prices_df.get("Longitude", pd.Series([0.0] * len(prices_df))), errors="coerce").fillna(0)
