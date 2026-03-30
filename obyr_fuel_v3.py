@@ -80,7 +80,6 @@ st.set_page_config(page_title="OBYR Fuel V3.8", page_icon="⛽", layout="wide")
 st.subheader("Official Dual Network")
 st.caption("✅ Auto-loads latest prices • Address search + GPS")
 
-# Address + GPS
 st.sidebar.header("📍 My Current Location")
 current_address = st.sidebar.text_input("Current Address", placeholder="Enter address or city")
 
@@ -157,7 +156,6 @@ if not petro_df.empty:
     petro_df["Station_Name"] = petro_df["Station_Name"].astype(str).str.strip().str.upper()
     petro_df["Province"] = petro_df["Province"].astype(str).str.strip().str.upper()
     petro_df["Network"] = "Petro"
-    # Simple matching - only upper and strip (what worked in early stable versions)
     petro_df = petro_df.merge(master_petro[["Station_Name", "Address", "Latitude", "Longitude"]], on="Station_Name", how="left")
 
 if not esso_prices.empty:
@@ -229,7 +227,7 @@ styled_df = display_df.style.format({
 
 st.dataframe(styled_df, width="stretch", hide_index=True)
 
-# Banners ONLY below the table
+# Banners only below the table
 if petro_path:
     st.success(f"✅ Loaded Petro prices: {os.path.basename(petro_path)}")
 if esso_path:
