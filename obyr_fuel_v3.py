@@ -134,6 +134,11 @@ def load_latest_price_file(pattern):
 petro_path = load_latest_price_file("petro_prices_*.csv")
 esso_path = load_latest_price_file("esso_prices_*.csv")
 
+if petro_path:
+    st.success(f"✅ Loaded Petro prices: {os.path.basename(petro_path)}")
+if esso_path:
+    st.success(f"✅ Loaded Esso prices: {os.path.basename(esso_path)}")
+
 # Load data
 if petro_path:
     petro_df = pd.read_csv(petro_path, skiprows=17, header=0)
@@ -152,6 +157,7 @@ if not petro_df.empty:
     petro_df["Station_Name"] = petro_df["Station_Name"].astype(str).str.strip().str.upper()
     petro_df["Province"] = petro_df["Province"].astype(str).str.strip().str.upper()
     petro_df["Network"] = "Petro"
+    # Gentle merge - no aggressive cleaning
     petro_df = petro_df.merge(master_petro[["Station_Name", "Address", "Latitude", "Longitude"]], on="Station_Name", how="left")
 
 if not esso_prices.empty:
@@ -223,7 +229,7 @@ styled_df = display_df.style.format({
 
 st.dataframe(styled_df, width="stretch", hide_index=True)
 
-# Moved green banners BELOW the table
+# Green banners below table
 if petro_path:
     st.success(f"✅ Loaded Petro prices: {os.path.basename(petro_path)}")
 if esso_path:
