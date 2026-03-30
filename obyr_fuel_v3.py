@@ -7,7 +7,7 @@ from datetime import datetime
 from geopy.geocoders import Nominatim
 from streamlit_geolocation import streamlit_geolocation
 
-# ====================== PATHS (works on Render + local) ======================
+# ====================== PATHS ======================
 BASE_DIR = os.getcwd()
 DRIVER_MASTER = os.path.join(BASE_DIR, "Locations", "driver_master.csv")
 LOGO_PATH = os.path.join(BASE_DIR, "obyr_logo.png")
@@ -98,7 +98,7 @@ dest_address = st.sidebar.text_input("Destination Address", placeholder="Enter a
 
 max_miles = st.sidebar.slider("Maximum miles from my current location", 50, 2000, 1000, 50)
 
-# Geocode helper
+# Geocode
 @st.cache_resource
 def get_geocoder():
     return Nominatim(user_agent="obyr_fuel_app")
@@ -133,11 +133,6 @@ def load_latest_price_file(pattern):
 
 petro_path = load_latest_price_file("petro_prices_*.csv")
 esso_path = load_latest_price_file("esso_prices_*.csv")
-
-if petro_path:
-    st.success(f"✅ Loaded Petro prices: {os.path.basename(petro_path)}")
-if esso_path:
-    st.success(f"✅ Loaded Esso prices: {os.path.basename(esso_path)}")
 
 # Load data
 if petro_path:
@@ -204,8 +199,6 @@ prices_df = prices_df[prices_df["Miles_from_Current"] <= max_miles]
 prices_df = prices_df.sort_values(by=["All_In_Price", "Miles_from_Current"]).reset_index(drop=True)
 prices_df["Savings_per_1000L"] = round((avg_all_in - prices_df["All_In_Price"]) * 1000, 0)
 
-st.success(f"📊 National all-in average: **${avg_all_in:.3f}**/L | Showing {len(prices_df)} stations")
-
 st.subheader(f"🚛 Best options • Current: {current_address or 'GPS'} • Destination: {dest_address or 'None'}")
 
 def highlight_savings(val):
@@ -229,6 +222,14 @@ styled_df = display_df.style.format({
 }).map(highlight_savings, subset=["Savings per 1,000 L"])
 
 st.dataframe(styled_df, width="stretch", hide_index=True)
+
+# Moved green banners BELOW the table
+if petro_path:
+    st.success(f"✅ Loaded Petro prices: {os.path.basename(petro_path)}")
+if esso_path:
+    st.success(f"✅ Loaded Esso prices: {os.path.basename(esso_path)}")
+
+st.success(f"📊 National all-in average: **${avg_all_in:.3f}**/L | Showing {len(prices_df)} stations")
 
 col1, col2 = st.columns(2)
 with col1: st.metric("Cheapest for YOU", f"${prices_df['All_In_Price'].iloc[0]:.3f}" if len(prices_df) > 0 else "—")
