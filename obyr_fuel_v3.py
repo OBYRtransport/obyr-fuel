@@ -7,9 +7,9 @@ from datetime import datetime
 from geopy.geocoders import Nominatim
 from streamlit_geolocation import streamlit_geolocation
 
-# ====================== PATHS ======================
-BASE_DIR = os.path.expanduser("~/Documents/OBYR Fuel")
-DRIVER_MASTER = os.path.join(BASE_DIR, "Locations/driver_master.csv")
+# ====================== PATHS (Render-friendly) ======================
+BASE_DIR = os.getcwd()
+DRIVER_MASTER = os.path.join(BASE_DIR, "Locations", "driver_master.csv")
 LOGO_PATH = os.path.join(BASE_DIR, "obyr_logo.png")
 
 # ====================== DRIVER LOGIN ======================
@@ -18,14 +18,13 @@ if "logged_in" not in st.session_state:
     st.session_state.driver_name = ""
 
 if not st.session_state.logged_in:
-    # Centered logo at the very top of login page
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         if os.path.exists(LOGO_PATH):
             st.image(LOGO_PATH, width=340)
         else:
             st.caption("👉 Add your company logo as obyr_logo.png")
-    
+
     st.title("🚛 OBYR Fuel")
     st.subheader("Driver Login")
     st.markdown("### Please log in to view fuel prices")
@@ -33,7 +32,6 @@ if not st.session_state.logged_in:
     if os.path.exists(DRIVER_MASTER):
         driver_df = pd.read_csv(DRIVER_MASTER)
     else:
-        driver_df = pd.DataFrame(columns=["Username", "Password"])
         st.error("❌ driver_master.csv not found in Locations folder")
         st.stop()
 
@@ -52,9 +50,21 @@ if not st.session_state.logged_in:
     st.caption("Contact dispatch if you need credentials")
     st.stop()
 
-# ====================== MAIN APP (after login) ======================
+# ====================== MAIN APP ======================
 st.success(f"✅ Logged in as **{st.session_state.driver_name}**")
 
+# ====================== DEBUG SECTION (expand this) ======================
+with st.expander("🔍 DEBUG — Click to see what Render sees", expanded=True):
+    st.write("**Current working directory:**", BASE_DIR)
+    st.write("**Files in root:**", os.listdir(BASE_DIR))
+    locations_path = os.path.join(BASE_DIR, "Locations")
+    if os.path.exists(locations_path):
+        st.write("**Files in Locations folder:**", os.listdir(locations_path))
+        st.write("**driver_master.csv exists?**", os.path.exists(DRIVER_MASTER))
+    else:
+        st.error("Locations folder not found!")
+
+# (rest of your app continues below)
 def haversine(lat1, lon1, lat2, lon2):
     if lat1 is None or lon1 is None or lat2 is None or lon2 is None:
         return np.full_like(lat2, 0.0) if hasattr(lat2, "__len__") else 0.0
@@ -74,19 +84,15 @@ PROV_TAX = {
 
 PRICES_DIR = os.path.join(BASE_DIR, "Prices")
 
-master_petro = pd.read_csv(os.path.join(BASE_DIR, "Locations/petro_pass_master.csv"), quotechar='"')
-master_esso = pd.read_csv(os.path.join(BASE_DIR, "Locations/esso_cardlock_master.csv"), quotechar='"')
+master_petro = pd.read_csv(os.path.join(BASE_DIR, "Locations", "petro_pass_master.csv"), quotechar='"')
+master_esso = pd.read_csv(os.path.join(BASE_DIR, "Locations", "esso_cardlock_master.csv"), quotechar='"')
 
 st.set_page_config(page_title="OBYR Fuel V3.8", page_icon="⛽", layout="wide")
-
-# Logo is already shown on login — we can show it again on main page if you want
-if os.path.exists(LOGO_PATH):
-    st.image(LOGO_PATH, width=340)
 
 st.subheader("Official Dual Network")
 st.caption("✅ Auto-loads latest prices • Address search + GPS")
 
-# Address + GPS
+# Address + GPS (unchanged)
 st.sidebar.header("📍 My Current Location")
 current_address = st.sidebar.text_input("Current Address", placeholder="279 Belfield Rd, Etobicoke, ON")
 if st.sidebar.button("📍 Get My Current GPS Location"):
@@ -144,7 +150,7 @@ if petro_path:
 if esso_path:
     st.success(f"✅ Loaded Esso prices: {os.path.basename(esso_path)}")
 
-# Load data (your stable code)
+# Load data
 if petro_path:
     petro_df = pd.read_csv(petro_path, skiprows=17, header=0)
 else:
@@ -191,7 +197,7 @@ if prices_df.empty:
     st.warning("No price files found. Please run the helpers first.")
     st.stop()
 
-# Calculations
+# Calculations (unchanged)
 prices_df["Address"] = prices_df.get("Address", pd.Series(["Address missing"] * len(prices_df))).fillna("Address missing")
 prices_df["Latitude"] = pd.to_numeric(prices_df.get("Latitude", pd.Series([0.0] * len(prices_df))), errors="coerce").fillna(0)
 prices_df["Longitude"] = pd.to_numeric(prices_df.get("Longitude", pd.Series([0.0] * len(prices_df))), errors="coerce").fillna(0)
