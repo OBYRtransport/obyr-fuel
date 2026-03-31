@@ -44,6 +44,14 @@ if not st.session_state.logged_in:
 # ====================== MAIN APP ======================
 st.success(f"✅ Logged in as **{st.session_state.driver_name}**")
 
+def clean_price(series):
+    """Force prices to numeric, handle cents/dollars, remove text"""
+    s = series.astype(str).str.replace(r'[^0-9.\-]', '', regex=True).replace('', np.nan)
+    s = pd.to_numeric(s, errors='coerce')
+    if s.dropna().median() and s.dropna().median() > 10:
+        s = s / 100
+    return s
+
 def haversine(lat1, lon1, lat2, lon2):
     if lat1 is None or lon1 is None or lat2 is None or lon2 is None:
         return np.zeros_like(lat2) if hasattr(lat2, "__len__") else 0.0
@@ -111,13 +119,17 @@ esso_path = load_latest("esso_prices_*.csv")
 if petro_path: st.success(f"✅ Loaded Petro: {os.path.basename(petro_path)}")
 if esso_path: st.success(f"✅ Loaded Esso: {os.path.basename(esso_path)}")
 
-# ====================== LOAD + MATCH (dynamic column mapping) ======================
+# ====================== LOAD + MATCH (dynamic + safe) ======================
 petro_df = pd.DataFrame()
 if petro_path:
-    petro_df = pd.read_csv(petro_path, skiprows=17, header=0)
-    petro_df = petro_df.iloc[:, [0,1,2]].copy()
+    df = pd.read_csv(petro_path)
+    df.columns = [c.strip() for c in df.columns]
+    price_col = next((col for col in df.columns if any(x in col.lower() for x in ["fuel", "price"])), None)
+    station_col = next((col for col in df.columns if any(x in col.lower() for x in ["station", "site", "name"])), df.columns[0])
+    province_col = next((col for col in df.columns if "prov" in col.lower()), df.columns[1])
+    petro_df = df[[station_col, province_col, price_col]].copy()
     petro_df.columns = ["Station_Name", "Province", "Price"]
-    petro_df = petro_df.dropna(subset=["Price"]).reset_index(drop=True)
+    petro_df["Price"] = clean_price(petro_df["Price"])
     petro_df["Station_Name"] = (
         petro_df["Station_Name"]
         .astype(str)
@@ -133,23 +145,15 @@ esso_df = pd.DataFrame()
 if esso_path:
     esso_prices = pd.read_csv(esso_path)
     esso_prices.columns = [c.strip() for c in esso_prices.columns]
-
-    # Dynamic column mapping (handles any variation)
     price_col = next((col for col in esso_prices.columns if any(x in col.lower() for x in ["fuel", "price"])), None)
     site_col = next((col for col in esso_prices.columns if "site" in col.lower()), None)
     province_col = next((col for col in esso_prices.columns if "prov" in col.lower()), None)
-
-    if price_col:
-        esso_prices = esso_prices.rename(columns={price_col: "Price"})
-    if site_col:
-        esso_prices = esso_prices.rename(columns={site_col: "SITE NUMBER"})
-    if province_col:
-        esso_prices = esso_prices.rename(columns={province_col: "Province"})
-
+    if price_col: esso_prices = esso_prices.rename(columns={price_col: "Price"})
+    if site_col: esso_prices = esso_prices.rename(columns={site_col: "SITE NUMBER"})
+    if province_col: esso_prices = esso_prices.rename(columns={province_col: "Province"})
     esso_prices = esso_prices.dropna(subset=["Price"]).reset_index(drop=True)
+    esso_prices["Price"] = clean_price(esso_prices["Price"])
     esso_prices["Province"] = esso_prices["Province"].astype(str).str.strip().str.upper()
-    if esso_prices["Price"].mean() > 10:
-        esso_prices["Price"] /= 100
     esso_df = esso_prices.merge(
         master_esso[["SITE NUMBER", "Station_Name", "Address", "Latitude", "Longitude"]],
         on="SITE NUMBER", how="left"
@@ -171,8 +175,8 @@ with st.expander("🔍 FULL DEBUG - Station Matching", expanded=False):
     st.write("**Petro Price rows:**", len(petro_df))
     st.write("**Esso Master rows:**", len(master_esso))
     st.write("**Esso Price rows:**", len(esso_df))
-    st.write("**Matched Petro stations:**", len(petro_df[petro_df.get("Address", pd.Series()).notna()]))
-    st.write("**Matched Esso stations:**", len(esso_df[esso_df.get("Address", pd.Series()).notna()]) if not esso_df.empty else 0)
+    st.write("**Matched Petro stations:**", len(petro_df.get("Address", pd.Series()).notna()))
+    st.write("**Matched Esso stations:**", len(esso_df.get("Address", pd.Series()).notna()) if not esso_df.empty else 0)
 
 # Calculations
 prices_df["Address"] = prices_df.get("Address", pd.Series(["Address missing"]*len(prices_df))).fillna("Address missing")
