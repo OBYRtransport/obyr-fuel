@@ -64,7 +64,7 @@ PRICES_DIR = os.path.join(BASE_DIR, "Prices")
 master_petro = pd.read_csv(os.path.join(BASE_DIR, "Locations", "petro_pass_master.csv"), quotechar='"')
 master_esso = pd.read_csv(os.path.join(BASE_DIR, "Locations", "esso_cardlock_master.csv"), quotechar='"')
 
-st.set_page_config(page_title="OBYR Fuel V4.3", page_icon="⛽", layout="wide")
+st.set_page_config(page_title="OBYR Fuel V4.4", page_icon="⛽", layout="wide")
 st.subheader("Official Dual Network")
 st.caption("✅ Auto-loads latest prices • Address search + GPS")
 
@@ -111,7 +111,7 @@ esso_path = load_latest("esso_prices_*.csv")
 if petro_path: st.success(f"✅ Loaded Petro: {os.path.basename(petro_path)}")
 if esso_path: st.success(f"✅ Loaded Esso: {os.path.basename(esso_path)}")
 
-# ====================== LOAD + MATCH ======================
+# ====================== LOAD + MATCH (dynamic column mapping) ======================
 petro_df = pd.DataFrame()
 if petro_path:
     petro_df = pd.read_csv(petro_path, skiprows=17, header=0)
@@ -133,15 +133,19 @@ esso_df = pd.DataFrame()
 if esso_path:
     esso_prices = pd.read_csv(esso_path)
     esso_prices.columns = [c.strip() for c in esso_prices.columns]
-    if "PROVINCE" in esso_prices.columns: esso_prices = esso_prices.rename(columns={"PROVINCE": "Province"})
-    # Handle both FUEL_PRICE and FUEL PRICE
-    if "FUEL_PRICE" in esso_prices.columns:
-        esso_prices = esso_prices.rename(columns={"FUEL_PRICE": "Price"})
-    elif "FUEL PRICE" in esso_prices.columns:
-        esso_prices = esso_prices.rename(columns={"FUEL PRICE": "Price"})
-    # FIXED: handle both SITE NUMBER and SITE_NUMBER
-    if "SITE_NUMBER" in esso_prices.columns:
-        esso_prices = esso_prices.rename(columns={"SITE_NUMBER": "SITE NUMBER"})
+
+    # Dynamic column mapping (handles any variation)
+    price_col = next((col for col in esso_prices.columns if any(x in col.lower() for x in ["fuel", "price"])), None)
+    site_col = next((col for col in esso_prices.columns if "site" in col.lower()), None)
+    province_col = next((col for col in esso_prices.columns if "prov" in col.lower()), None)
+
+    if price_col:
+        esso_prices = esso_prices.rename(columns={price_col: "Price"})
+    if site_col:
+        esso_prices = esso_prices.rename(columns={site_col: "SITE NUMBER"})
+    if province_col:
+        esso_prices = esso_prices.rename(columns={province_col: "Province"})
+
     esso_prices = esso_prices.dropna(subset=["Price"]).reset_index(drop=True)
     esso_prices["Province"] = esso_prices["Province"].astype(str).str.strip().str.upper()
     if esso_prices["Price"].mean() > 10:
@@ -167,8 +171,8 @@ with st.expander("🔍 FULL DEBUG - Station Matching", expanded=False):
     st.write("**Petro Price rows:**", len(petro_df))
     st.write("**Esso Master rows:**", len(master_esso))
     st.write("**Esso Price rows:**", len(esso_df))
-    st.write("**Matched Petro stations:**", len(petro_df[petro_df["Address"].notna()]))
-    st.write("**Matched Esso stations:**", len(esso_df[esso_df["Address"].notna()]) if not esso_df.empty else 0)
+    st.write("**Matched Petro stations:**", len(petro_df[petro_df.get("Address", pd.Series()).notna()]))
+    st.write("**Matched Esso stations:**", len(esso_df[esso_df.get("Address", pd.Series()).notna()]) if not esso_df.empty else 0)
 
 # Calculations
 prices_df["Address"] = prices_df.get("Address", pd.Series(["Address missing"]*len(prices_df))).fillna("Address missing")
@@ -208,4 +212,4 @@ with col1: st.metric("Cheapest for YOU", f"${prices_df['All_In_Price'].iloc[0]:.
 with col2: st.metric("Your best savings", f"${prices_df['Savings_per_1000L'].iloc[0]:,.0f}" if len(prices_df)>0 else "—")
 
 st.download_button("📥 Download this list", prices_df.to_csv(index=False), f"obyr_fuel_v4_{datetime.now().strftime('%Y-%m-%d')}.csv")
-st.caption(f"© {datetime.now().year} OBYR Transport Inc. • OBYR Fuel V4.3")
+st.caption(f"© {datetime.now().year} OBYR Transport Inc. • OBYR Fuel V4.4")
