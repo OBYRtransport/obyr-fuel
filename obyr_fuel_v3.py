@@ -45,7 +45,6 @@ if not st.session_state.logged_in:
 st.success(f"✅ Logged in as **{st.session_state.driver_name}**")
 
 def clean_price(series):
-    """Force prices to numeric, handle cents/dollars, remove text"""
     s = series.astype(str).str.replace(r'[^0-9.\-]', '', regex=True).replace('', np.nan)
     s = pd.to_numeric(s, errors='coerce')
     if s.dropna().median() and s.dropna().median() > 10:
@@ -72,7 +71,7 @@ PRICES_DIR = os.path.join(BASE_DIR, "Prices")
 master_petro = pd.read_csv(os.path.join(BASE_DIR, "Locations", "petro_pass_master.csv"), quotechar='"')
 master_esso = pd.read_csv(os.path.join(BASE_DIR, "Locations", "esso_cardlock_master.csv"), quotechar='"')
 
-st.set_page_config(page_title="OBYR Fuel V4.4", page_icon="⛽", layout="wide")
+st.set_page_config(page_title="OBYR Fuel V4.5", page_icon="⛽", layout="wide")
 st.subheader("Official Dual Network")
 st.caption("✅ Auto-loads latest prices • Address search + GPS")
 
@@ -108,10 +107,18 @@ if current_address:
 
 dest_lat, dest_lon = geocode(dest_address) or (43.69823, -79.58937)
 
-# Load latest
+# IMPROVED load_latest — always picks the newest date in filename
 def load_latest(pattern):
     files = glob.glob(os.path.join(PRICES_DIR, pattern))
-    return max(files, key=os.path.getctime) if files else None
+    if not files:
+        return None
+    # Sort by the date string in the filename (YYYY-MM-DD)
+    def get_date(f):
+        try:
+            return datetime.strptime(os.path.basename(f).split('_')[-1].split('.')[0], '%Y-%m-%d')
+        except:
+            return datetime(2000,1,1)
+    return max(files, key=get_date)
 
 petro_path = load_latest("petro_prices_*.csv")
 esso_path = load_latest("esso_prices_*.csv")
@@ -169,7 +176,7 @@ elif network_choice == "Esso":
 else:
     prices_df = pd.concat([petro_df, esso_df], ignore_index=True)
 
-# Debug
+# Debug (collapsed)
 with st.expander("🔍 FULL DEBUG - Station Matching", expanded=False):
     st.write("**Petro Master rows:**", len(master_petro))
     st.write("**Petro Price rows:**", len(petro_df))
@@ -216,4 +223,4 @@ with col1: st.metric("Cheapest for YOU", f"${prices_df['All_In_Price'].iloc[0]:.
 with col2: st.metric("Your best savings", f"${prices_df['Savings_per_1000L'].iloc[0]:,.0f}" if len(prices_df)>0 else "—")
 
 st.download_button("📥 Download this list", prices_df.to_csv(index=False), f"obyr_fuel_v4_{datetime.now().strftime('%Y-%m-%d')}.csv")
-st.caption(f"© {datetime.now().year} OBYR Transport Inc. • OBYR Fuel V4.4")
+st.caption(f"© {datetime.now().year} OBYR Transport Inc. • OBYR Fuel V4.5")
