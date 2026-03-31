@@ -45,7 +45,6 @@ if not st.session_state.logged_in:
 st.success(f"✅ Logged in as **{st.session_state.driver_name}**")
 
 def haversine(lat1, lon1, lat2, lon2):
-    """Safe version that never crashes on None values"""
     if lat1 is None or lon1 is None or lat2 is None or lon2 is None:
         return np.zeros_like(lat2) if hasattr(lat2, "__len__") else 0.0
     R = 3958.8
@@ -65,11 +64,11 @@ PRICES_DIR = os.path.join(BASE_DIR, "Prices")
 master_petro = pd.read_csv(os.path.join(BASE_DIR, "Locations", "petro_pass_master.csv"), quotechar='"')
 master_esso = pd.read_csv(os.path.join(BASE_DIR, "Locations", "esso_cardlock_master.csv"), quotechar='"')
 
-st.set_page_config(page_title="OBYR Fuel V4.1", page_icon="⛽", layout="wide")
+st.set_page_config(page_title="OBYR Fuel V4.2", page_icon="⛽", layout="wide")
 st.subheader("Official Dual Network")
 st.caption("✅ Auto-loads latest prices • Address search + GPS")
 
-# Sidebar inputs
+# Sidebar
 st.sidebar.header("📍 My Current Location")
 current_address = st.sidebar.text_input("Current Address", placeholder="Enter address or city")
 if st.sidebar.button("📍 Get My Current GPS Location"):
@@ -99,9 +98,7 @@ if current_address:
     lat, lon = geocode(current_address)
     if lat is not None: current_lat, current_lon = lat, lon
 
-dest_lat, dest_lon = geocode(dest_address)
-if dest_lat is None or dest_lon is None:
-    dest_lat, dest_lon = 43.69823, -79.58937   # fallback to yard
+dest_lat, dest_lon = geocode(dest_address) or (43.69823, -79.58937)
 
 # Load latest price files
 def load_latest(pattern):
@@ -114,14 +111,13 @@ esso_path = load_latest("esso_prices_*.csv")
 if petro_path: st.success(f"✅ Loaded Petro: {os.path.basename(petro_path)}")
 if esso_path: st.success(f"✅ Loaded Esso: {os.path.basename(esso_path)}")
 
-# ====================== LOAD + MATCH (no filters) ======================
+# ====================== LOAD + MATCH ======================
 petro_df = pd.DataFrame()
 if petro_path:
     petro_df = pd.read_csv(petro_path, skiprows=17, header=0)
     petro_df = petro_df.iloc[:, [0,1,2]].copy()
     petro_df.columns = ["Station_Name", "Province", "Price"]
     petro_df = petro_df.dropna(subset=["Price"]).reset_index(drop=True)
-    # Province suffix removal ONLY for matching (keeps original name for display)
     petro_df["Station_Name"] = (
         petro_df["Station_Name"]
         .astype(str)
@@ -141,7 +137,11 @@ if esso_path:
     esso_prices = pd.read_csv(esso_path)
     esso_prices.columns = [c.strip() for c in esso_prices.columns]
     if "PROVINCE" in esso_prices.columns: esso_prices = esso_prices.rename(columns={"PROVINCE": "Province"})
-    if "FUEL PRICE" in esso_prices.columns: esso_prices = esso_prices.rename(columns={"FUEL PRICE": "Price"})
+    # === FIXED: handle both FUEL_PRICE and FUEL PRICE ===
+    if "FUEL_PRICE" in esso_prices.columns:
+        esso_prices = esso_prices.rename(columns={"FUEL_PRICE": "Price"})
+    elif "FUEL PRICE" in esso_prices.columns:
+        esso_prices = esso_prices.rename(columns={"FUEL PRICE": "Price"})
     esso_prices = esso_prices.dropna(subset=["Price"]).reset_index(drop=True)
     esso_prices["Province"] = esso_prices["Province"].astype(str).str.strip().str.upper()
     if esso_prices["Price"].mean() > 10:
@@ -161,7 +161,7 @@ elif network_choice == "Esso":
 else:
     prices_df = pd.concat([petro_df, esso_df], ignore_index=True)
 
-# ====================== DEBUG (keep for one more check) ======================
+# Debug (collapsed)
 with st.expander("🔍 FULL DEBUG - Station Matching", expanded=False):
     st.write("**Petro Master rows:**", len(master_petro))
     st.write("**Petro Price rows:**", len(petro_df))
@@ -170,7 +170,7 @@ with st.expander("🔍 FULL DEBUG - Station Matching", expanded=False):
     st.write("**Matched Petro stations:**", len(petro_df[petro_df["Address"].notna()]))
     st.write("**Matched Esso stations:**", len(esso_df[esso_df["Address"].notna()]) if not esso_df.empty else 0)
 
-# ====================== CALCULATIONS ======================
+# Calculations & display (same as before)
 prices_df["Address"] = prices_df.get("Address", pd.Series(["Address missing"]*len(prices_df))).fillna("Address missing")
 prices_df["Latitude"] = pd.to_numeric(prices_df.get("Latitude", pd.Series([0.0]*len(prices_df))), errors="coerce").fillna(0)
 prices_df["Longitude"] = pd.to_numeric(prices_df.get("Longitude", pd.Series([0.0]*len(prices_df))), errors="coerce").fillna(0)
@@ -208,4 +208,4 @@ with col1: st.metric("Cheapest for YOU", f"${prices_df['All_In_Price'].iloc[0]:.
 with col2: st.metric("Your best savings", f"${prices_df['Savings_per_1000L'].iloc[0]:,.0f}" if len(prices_df)>0 else "—")
 
 st.download_button("📥 Download this list", prices_df.to_csv(index=False), f"obyr_fuel_v4_{datetime.now().strftime('%Y-%m-%d')}.csv")
-st.caption(f"© {datetime.now().year} OBYR Transport Inc. • OBYR Fuel V4.1")
+st.caption(f"© {datetime.now().year} OBYR Transport Inc. • OBYR Fuel V4.2")
