@@ -170,13 +170,6 @@ def read_driver_master() -> Optional[pd.DataFrame]:
 
 
 def load_petro_prices(path: Optional[Path] = None) -> pd.DataFrame:
-    """
-    Petro files in your workflow are report-style exports, not clean tabular CSVs.
-    Read them using the stable layout:
-    - skip first 17 lines
-    - take first 3 columns only
-    - Station / Province / Price
-    """
     if path is None:
         path = load_latest("petro_prices_*.csv")
     if path is None:
@@ -192,10 +185,8 @@ def load_petro_prices(path: Optional[Path] = None) -> pd.DataFrame:
     raw["Station_Name"] = raw["Station_Name"].astype(str).str.strip()
     raw["Province"] = raw["Province"].astype(str).str.strip().str.upper()
     raw["Price"] = clean_price(raw["Price"])
-
     raw = raw.dropna(subset=["Price"]).copy()
 
-    # Remove obvious junk/footer/header fragments
     bad_station_patterns = [
         r"^NAN$",
         r"^PAGE",
@@ -208,7 +199,6 @@ def load_petro_prices(path: Optional[Path] = None) -> pd.DataFrame:
     bad_regex = re.compile("|".join(bad_station_patterns))
     raw = raw[~raw["Station_Name"].str.upper().str.match(bad_regex, na=False)].copy()
 
-    # Normalize province glitches from malformed supplier rows
     raw["Province"] = raw["Province"].replace(
         {
             "B": "BC",
@@ -392,7 +382,13 @@ def build_price_table(
         prices_df = pd.concat([petro_df, esso_df], ignore_index=True)
 
     if prices_df.empty:
+        latest_petro = load_latest("petro_prices_*.csv")
+        latest_esso = load_latest("esso_prices_*.csv")
         meta = {
+            "latest_petro_file": latest_petro.name if latest_petro else "",
+            "latest_esso_file": latest_esso.name if latest_esso else "",
+            "petro_stats": petro_stats,
+            "esso_stats": esso_stats,
             "petro_source_rows": len(petro_prices),
             "petro_matched_rows": petro_stats["matched_rows"],
             "petro_unmatched_rows": petro_stats["unmatched_rows"],
@@ -401,8 +397,6 @@ def build_price_table(
             "esso_unmatched_rows": esso_stats["unmatched_rows"],
             "display_rows": 0,
             "avg_all_in": 0.0,
-            "latest_petro_file": str(load_latest("petro_prices_*.csv").name if load_latest("petro_prices_*.csv") else ""),
-            "latest_esso_file": str(load_latest("esso_prices_*.csv").name if load_latest("esso_prices_*.csv") else ""),
         }
         return prices_df, meta
 
@@ -442,6 +436,8 @@ def build_price_table(
     meta = {
         "latest_petro_file": latest_petro.name if latest_petro else "",
         "latest_esso_file": latest_esso.name if latest_esso else "",
+        "petro_stats": petro_stats,
+        "esso_stats": esso_stats,
         "petro_source_rows": len(petro_prices),
         "petro_matched_rows": petro_stats["matched_rows"],
         "petro_unmatched_rows": petro_stats["unmatched_rows"],
