@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import csv
-import glob
-import os
 import re
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -51,6 +49,21 @@ def load_latest(pattern: str, prices_dir: Optional[Path] = None) -> Optional[Pat
         return (match.group(1) if match else "", p.stat().st_mtime)
 
     return max(files, key=sort_key)
+
+
+def safe_read_csv(path: Path, **kwargs) -> pd.DataFrame:
+    """
+    Read CSV with a strict parser first.
+    If the supplier export has malformed rows, fall back to the Python parser
+    and skip only the bad lines instead of crashing the app.
+    """
+    try:
+        return pd.read_csv(path, **kwargs)
+    except pd.errors.ParserError:
+        fallback_kwargs = dict(kwargs)
+        fallback_kwargs.pop("engine", None)
+        fallback_kwargs.pop("on_bad_lines", None)
+        return pd.read_csv(path, engine="python", on_bad_lines="skip", **fallback_kwargs)
 
 
 def clean_price(series: pd.Series) -> pd.Series:
@@ -109,10 +122,10 @@ def haversine(lat1: float, lon1: float, lat2: pd.Series, lon2: pd.Series) -> np.
 
 def read_petro_master() -> pd.DataFrame:
     path = resolve_path("Locations/petro_pass_master.csv", "petro_pass_master.csv")
-    df = pd.read_csv(path)
+    df = safe_read_csv(path)
     df.columns = [c.strip() for c in df.columns]
     df["Province"] = df["Province"].astype(str).str.strip().str.upper()
-    df["match_key"] = (df["Station_Name"].map(normalize_text) + "|" + df["Province"])
+    df["match_key"] = df["Station_Name"].map(normalize_text) + "|" + df["Province"]
     return df
 
 
@@ -131,11 +144,12 @@ def read_esso_master() -> pd.DataFrame:
             else:
                 padded = (row + [""] * len(header))[: len(header)]
                 rows.append(padded)
+
     df = pd.DataFrame(rows, columns=header)
     df.columns = [c.strip() for c in df.columns]
     df["SITE NUMBER"] = df["SITE NUMBER"].astype(str).str.strip()
     df["Province"] = df["Province"].astype(str).str.strip().str.upper()
-    df["match_key"] = (df["Station_Name"].map(normalize_text) + "|" + df["Province"])
+    df["match_key"] = df["Station_Name"].map(normalize_text) + "|" + df["Province"]
     return df
 
 
@@ -144,7 +158,7 @@ def read_driver_master() -> Optional[pd.DataFrame]:
         path = resolve_path("Locations/driver_master.csv")
     except FileNotFoundError:
         return None
-    df = pd.read_csv(path)
+    df = safe_read_csv(path)
     df.columns = [c.strip() for c in df.columns]
     return df
 
@@ -155,25 +169,50 @@ def load_petro_prices(path: Optional[Path] = None) -> pd.DataFrame:
     if path is None:
         return pd.DataFrame()
 
-    df = pd.read_csv(path)
+    df = safe_read_csv(path)
     df.columns = [c.strip() for c in df.columns]
-    rename = {
-        "PROVINCE": "Province",
-        "CITY": "City",
-        "FUEL_PRICE": "Price",
-    }
-    df = df.rename(columns={k: v for k, v in rename.items() if k in df.columns})
-    for col in ["SITE_NAME", "Station_Name", "Province", "City", "Address", "Price"]:
+
+    rename_map = {}
+    for col in df.columns:
+        upper = col.upper().strip()
+        if upper in {"SITE NUMBER", "SITE_NUMBER", "SITE #", "SITE#"}:
+            rename_map[col] = "SITE_NUMBER"
+        elif upper in {"SITE NAME", "SITE_NAME"}:
+            rename_map[col] = "SITE_NAME"
+        elif upper in {"STATION NAME", "STATION_NAME", "STATION", "LOCATION"}:
+            rename_map[col] = "Station_Name"
+        elif upper in {"PROVINCE", "PROV"}:
+            rename_map[col] = "Province"
+        elif upper == "CITY":
+            rename_map[col] = "City"
+        elif upper == "ADDRESS":
+            rename_map[col] = "Address"
+        elif upper in {"PRICE", "FUEL PRICE", "FUEL_PRICE"}:
+            rename_map[col] = "Price"
+
+    df = df.rename(columns=rename_map)
+
+    required = {"Station_Name", "Province", "Price"}
+    if not required.issubset(df.columns):
+        raw = safe_read_csv(path, skiprows=17)
+        raw.columns = [c.strip() for c in raw.columns]
+        raw = raw.iloc[:, :3].copy()
+        raw.columns = ["Station_Name", "Province", "Price"]
+        df = raw
+
+    for col in ["SITE_NUMBER", "SITE_NAME", "Station_Name", "Province", "City", "Address", "Price"]:
         if col not in df.columns:
             df[col] = np.nan
 
     df["Province"] = df["Province"].astype(str).str.strip().str.upper()
     df["Price"] = clean_price(df["Price"])
     df = df.dropna(subset=["Price"]).copy()
+
     df["match_name"] = df["Station_Name"].map(normalize_text)
     df["match_site"] = df["SITE_NAME"].map(normalize_text)
     df["match_city"] = df["City"].map(normalize_text)
-    return df
+
+    return df.reset_index(drop=True)
 
 
 def load_esso_prices(path: Optional[Path] = None) -> pd.DataFrame:
@@ -182,19 +221,25 @@ def load_esso_prices(path: Optional[Path] = None) -> pd.DataFrame:
     if path is None:
         return pd.DataFrame()
 
-    df = pd.read_csv(path)
+    df = safe_read_csv(path)
     df.columns = [c.strip() for c in df.columns]
+
     rename_map = {}
     for col in df.columns:
         upper = col.upper().strip()
         if upper in {"PROVINCE", "PROV"}:
             rename_map[col] = "Province"
-        elif upper in {"CITY"}:
+        elif upper == "CITY":
             rename_map[col] = "City"
         elif upper in {"FUEL PRICE", "FUEL_PRICE", "PRICE"}:
             rename_map[col] = "Price"
         elif upper in {"SITE NUMBER", "SITE_NUMBER", "SITE#"}:
             rename_map[col] = "SITE_NUMBER"
+        elif upper == "STATION NAME":
+            rename_map[col] = "Station_Name"
+        elif upper == "ADDRESS":
+            rename_map[col] = "Address"
+
     df = df.rename(columns=rename_map)
 
     for col in ["SITE_NUMBER", "Station_Name", "Province", "City", "Address", "Price"]:
@@ -204,9 +249,10 @@ def load_esso_prices(path: Optional[Path] = None) -> pd.DataFrame:
     df["SITE_NUMBER"] = df["SITE_NUMBER"].astype(str).str.strip()
     df["Province"] = df["Province"].astype(str).str.strip().str.upper()
     df["Price"] = clean_price(df["Price"])
-    df["match_key"] = (df["Station_Name"].map(normalize_text) + "|" + df["Province"])
+    df["match_key"] = df["Station_Name"].map(normalize_text) + "|" + df["Province"]
     df = df.dropna(subset=["Price"]).copy()
-    return df
+
+    return df.reset_index(drop=True)
 
 
 def match_petro(petro_prices: pd.DataFrame, master_petro: pd.DataFrame) -> Tuple[pd.DataFrame, Dict[str, int]]:
@@ -214,24 +260,28 @@ def match_petro(petro_prices: pd.DataFrame, master_petro: pd.DataFrame) -> Tuple
         return pd.DataFrame(), {"price_rows": 0, "matched_rows": 0, "unmatched_rows": 0}
 
     master_name = master_petro[["match_key", "Station_Name", "Address", "Latitude", "Longitude"]].copy()
+
     by_name = petro_prices.copy()
     by_name["match_key"] = by_name["match_name"] + "|" + by_name["Province"]
     by_name = by_name.merge(master_name, on="match_key", how="left", suffixes=("", "_master"))
 
     unmatched = by_name[by_name["Address_master"].isna()].copy()
     if not unmatched.empty:
-        by_site = unmatched.drop(columns=["Station_Name_master", "Address_master", "Latitude", "Longitude"]).copy()
+        by_site = unmatched.drop(
+            columns=["Station_Name_master", "Address_master", "Latitude", "Longitude"],
+            errors="ignore",
+        ).copy()
         by_site["match_key"] = by_site["match_site"] + "|" + by_site["Province"]
         by_site = by_site.merge(master_name, on="match_key", how="left", suffixes=("", "_master"))
         for col in ["Station_Name_master", "Address_master", "Latitude", "Longitude"]:
-            by_name.loc[unmatched.index, col] = by_site[col].values
+            if col in by_site.columns:
+                by_name.loc[unmatched.index, col] = by_site[col].values
 
     by_name["Address_final"] = by_name["Address_master"].fillna(by_name["Address"])
     by_name["Station_Final"] = by_name["Station_Name_master"].fillna(by_name["Station_Name"])
     by_name["Latitude"] = pd.to_numeric(by_name["Latitude"], errors="coerce")
     by_name["Longitude"] = pd.to_numeric(by_name["Longitude"], errors="coerce")
     by_name["Network"] = "Petro"
-    by_name = by_name.rename(columns={"Province": "Province", "Price": "Price"})
 
     result = pd.DataFrame(
         {
@@ -248,6 +298,7 @@ def match_petro(petro_prices: pd.DataFrame, master_petro: pd.DataFrame) -> Tuple
             "Matched": by_name["Address_master"].notna(),
         }
     )
+
     result = result.drop_duplicates(subset=["Source_Site_Name", "Province", "Price"]).reset_index(drop=True)
     stats = {
         "price_rows": len(result),
@@ -271,20 +322,19 @@ def match_esso(esso_prices: pd.DataFrame, master_esso: pd.DataFrame) -> Tuple[pd
 
     still_unmatched = matched[matched["Address_master"].isna()].copy()
     if not still_unmatched.empty:
-        fallback = still_unmatched.drop(columns=["Station_Name_master", "Address_master", "Latitude", "Longitude", "match_key_master", "SITE NUMBER"]).copy()
+        fallback = still_unmatched.drop(
+            columns=["Station_Name_master", "Address_master", "Latitude", "Longitude", "match_key_master", "SITE NUMBER"],
+            errors="ignore",
+        ).copy()
         fallback = fallback.merge(
             master_esso[["match_key", "Station_Name", "Address", "Latitude", "Longitude"]],
             on="match_key",
             how="left",
             suffixes=("", "_master"),
         )
-        for col, source in {
-            "Station_Name_master": "Station_Name_master",
-            "Address_master": "Address_master",
-            "Latitude": "Latitude",
-            "Longitude": "Longitude",
-        }.items():
-            matched.loc[still_unmatched.index, col] = fallback[source].values
+        for col in ["Station_Name_master", "Address_master", "Latitude", "Longitude"]:
+            if col in fallback.columns:
+                matched.loc[still_unmatched.index, col] = fallback[col].values
 
     matched["Address_final"] = matched["Address_master"].fillna(matched["Address"])
     matched["Station_Final"] = matched["Station_Name_master"].fillna(matched["Station_Name"])
@@ -307,6 +357,7 @@ def match_esso(esso_prices: pd.DataFrame, master_esso: pd.DataFrame) -> Tuple[pd
             "Matched": matched["Address_master"].notna(),
         }
     )
+
     result = result.drop_duplicates(subset=["Source_Site_Number", "Province", "Price"]).reset_index(drop=True)
     stats = {
         "price_rows": len(result),
@@ -352,11 +403,20 @@ def build_price_table(
     dest_lat = current_lat if dest_lat is None else dest_lat
     dest_lon = current_lon if dest_lon is None else dest_lon
 
-    prices_df["Miles_from_Current"] = np.round(haversine(current_lat, current_lon, prices_df["Latitude"], prices_df["Longitude"]), 1)
-    prices_df["Miles_from_Destination"] = np.round(haversine(dest_lat, dest_lon, prices_df["Latitude"], prices_df["Longitude"]), 1)
-    prices_df["Miles_from_Yard"] = np.round(haversine(DEFAULT_YARD["lat"], DEFAULT_YARD["lon"], prices_df["Latitude"], prices_df["Longitude"]), 1)
+    prices_df["Miles_from_Current"] = np.round(
+        haversine(current_lat, current_lon, prices_df["Latitude"], prices_df["Longitude"]), 1
+    )
+    prices_df["Miles_from_Destination"] = np.round(
+        haversine(dest_lat, dest_lon, prices_df["Latitude"], prices_df["Longitude"]), 1
+    )
+    prices_df["Miles_from_Yard"] = np.round(
+        haversine(DEFAULT_YARD["lat"], DEFAULT_YARD["lon"], prices_df["Latitude"], prices_df["Longitude"]), 1
+    )
 
-    prices_df = prices_df[(prices_df["Miles_from_Current"] <= float(max_miles)) | prices_df["Latitude"].isna()].copy()
+    prices_df = prices_df[
+        (prices_df["Miles_from_Current"] <= float(max_miles)) | prices_df["Latitude"].isna()
+    ].copy()
+
     prices_df["Savings_per_1000L"] = np.round((avg_all_in - prices_df["All_In_Price"]) * 1000, 0)
     prices_df = prices_df.sort_values(["All_In_Price", "Miles_from_Current", "Station_Name"]).reset_index(drop=True)
 
