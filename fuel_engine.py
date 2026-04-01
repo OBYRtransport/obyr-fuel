@@ -151,6 +151,22 @@ def read_esso_master() -> pd.DataFrame:
 
     df = pd.DataFrame(rows, columns=header)
     df.columns = [c.strip() for c in df.columns]
+
+    if "SITE NUMBER" not in df.columns:
+        df["SITE NUMBER"] = ""
+
+    if "Province" not in df.columns:
+        df["Province"] = ""
+
+    if "Latitude" not in df.columns:
+        df["Latitude"] = np.nan
+
+    if "Longitude" not in df.columns:
+        df["Longitude"] = np.nan
+
+    if "Station_Name" not in df.columns:
+        df["Station_Name"] = ""
+
     df["SITE NUMBER"] = df["SITE NUMBER"].astype(str).str.strip()
     df["Province"] = df["Province"].astype(str).str.strip().str.upper()
     df["Latitude"] = pd.to_numeric(df["Latitude"], errors="coerce")
@@ -170,36 +186,106 @@ def read_driver_master() -> Optional[pd.DataFrame]:
 
 
 def load_petro_prices(path: Optional[Path] = None) -> pd.DataFrame:
+    """
+    Parse Petro report-style exports robustly.
+
+    Handles:
+    1) normal rows: STATION,PR,1.2345,...
+    2) malformed rows where province is embedded in station field
+    3) rows where province is missing entirely but station + price still exist
+    """
     if path is None:
         path = load_latest("petro_prices_*.csv")
     if path is None:
         return pd.DataFrame()
 
-    raw = safe_read_csv(path, skiprows=17, header=None)
-    if raw.empty:
-        return pd.DataFrame()
+    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
 
-    raw = raw.iloc[:, :3].copy()
-    raw.columns = ["Station_Name", "Province", "Price"]
+    records = []
+    started = False
 
-    raw["Station_Name"] = raw["Station_Name"].astype(str).str.strip()
-    raw["Province"] = raw["Province"].astype(str).str.strip().str.upper()
-    raw["Price"] = clean_price(raw["Price"])
-    raw = raw.dropna(subset=["Price"]).copy()
+    for raw_line in lines:
+        line = raw_line.rstrip()
 
-    bad_station_patterns = [
-        r"^NAN$",
-        r"^PAGE",
-        r"^PRODUCT",
-        r"^ACCOUNT",
-        r"^REGION",
-        r"^DUE TO OCCASIONAL",
-        r"^AS OF",
-    ]
-    bad_regex = re.compile("|".join(bad_station_patterns))
-    raw = raw[~raw["Station_Name"].str.upper().str.match(bad_regex, na=False)].copy()
+        if not started:
+            if "SITE NAME" in line and "PST $/L" in line:
+                started = True
+            continue
 
-    raw["Province"] = raw["Province"].replace(
+        if not line.strip():
+            continue
+        if line.strip().startswith("---"):
+            continue
+
+        parts = [p.rstrip() for p in line.split(",")]
+
+        station = None
+        province = None
+        price = None
+
+        if len(parts) >= 3:
+            p0 = parts[0].strip()
+            p1 = parts[1].strip().upper()
+            p2 = parts[2].strip()
+
+            if re.fullmatch(r"[A-Z]{2}", p1):
+                station = p0
+                province = p1
+                price = p2
+
+        if station is None and len(parts) >= 3:
+            m = re.match(r"^(?P<station>.+?)\s{2,}(?P<prov>[A-Z]{2})\s*$", parts[0].strip())
+            if m:
+                station = m.group("station").strip()
+                province = m.group("prov").strip()
+                price = parts[2].strip()
+
+        if station is None and len(parts) >= 3:
+            m = re.match(r"^(?P<station>.+?)\s+(?P<prov>[A-Z]{2})$", parts[0].strip())
+            if m and parts[1].strip() == "":
+                station = m.group("station").strip()
+                province = m.group("prov").strip()
+                price = parts[2].strip()
+
+        if station is None and len(parts) >= 3:
+            p0 = parts[0].strip()
+            p2 = parts[2].strip()
+            if p0 and re.fullmatch(r"\d+\.\d{4}", p2):
+                station = p0
+                province = ""
+                price = p2
+
+        if not station:
+            continue
+
+        junk_prefixes = (
+            "ACCOUNT",
+            "PRODUCT",
+            "REGION",
+            "AS OF",
+            "PAGE",
+            "DUE TO OCCASIONAL",
+        )
+        if station.upper().startswith(junk_prefixes):
+            continue
+
+        records.append(
+            {
+                "Station_Name": station.strip(),
+                "Province": str(province or "").strip().upper(),
+                "Price": price,
+            }
+        )
+
+    df = pd.DataFrame(records)
+
+    if df.empty:
+        return df
+
+    df["Price"] = clean_price(df["Price"])
+    df = df.dropna(subset=["Price"]).copy()
+
+    df["Province"] = df["Province"].replace(
         {
             "B": "BC",
             "A": "AB",
@@ -211,10 +297,10 @@ def load_petro_prices(path: Optional[Path] = None) -> pd.DataFrame:
         }
     )
 
-    raw["match_name"] = raw["Station_Name"].map(normalize_text)
-    raw["match_key"] = raw["match_name"] + "|" + raw["Province"]
+    df["match_name"] = df["Station_Name"].map(normalize_text)
+    df["match_key"] = df["match_name"] + "|" + df["Province"]
 
-    return raw.reset_index(drop=True)
+    return df.reset_index(drop=True)
 
 
 def load_esso_prices(path: Optional[Path] = None) -> pd.DataFrame:
@@ -267,6 +353,55 @@ def match_petro(petro_prices: pd.DataFrame, master_petro: pd.DataFrame) -> Tuple
         how="left",
         suffixes=("", "_master"),
     )
+
+    still_unmatched = matched[matched["Address"].isna()].copy()
+    if not still_unmatched.empty:
+        master_station = master_petro.copy()
+        master_station["match_name_only"] = master_station["Station_Name"].map(normalize_text)
+
+        unique_names = (
+            master_station.groupby("match_name_only")
+            .size()
+            .reset_index(name="cnt")
+            .query("cnt == 1")["match_name_only"]
+        )
+        master_station = master_station[master_station["match_name_only"].isin(unique_names)].copy()
+
+        fallback = still_unmatched.copy()
+        fallback["match_name_only"] = fallback["Station_Name"].map(normalize_text)
+
+        fallback = fallback.merge(
+            master_station[["match_name_only", "Station_Name", "Province", "Address", "Latitude", "Longitude"]],
+            on="match_name_only",
+            how="left",
+            suffixes=("", "_fallback"),
+        )
+
+        if "Address_fallback" in fallback.columns:
+            matched.loc[still_unmatched.index, "Address"] = matched.loc[still_unmatched.index, "Address"].fillna(
+                pd.Series(fallback["Address_fallback"].values, index=still_unmatched.index)
+            )
+
+        if "Latitude_fallback" in fallback.columns:
+            matched.loc[still_unmatched.index, "Latitude"] = matched.loc[still_unmatched.index, "Latitude"].fillna(
+                pd.Series(fallback["Latitude_fallback"].values, index=still_unmatched.index)
+            )
+
+        if "Longitude_fallback" in fallback.columns:
+            matched.loc[still_unmatched.index, "Longitude"] = matched.loc[still_unmatched.index, "Longitude"].fillna(
+                pd.Series(fallback["Longitude_fallback"].values, index=still_unmatched.index)
+            )
+
+        if "Station_Name_fallback" in fallback.columns:
+            matched.loc[still_unmatched.index, "Station_Name_master"] = matched.loc[
+                still_unmatched.index, "Station_Name_master"
+            ].fillna(pd.Series(fallback["Station_Name_fallback"].values, index=still_unmatched.index))
+
+        if "Province_fallback" in fallback.columns:
+            blank_mask = matched.loc[still_unmatched.index, "Province"].fillna("").eq("")
+            if blank_mask.any():
+                blank_index = still_unmatched.index[blank_mask]
+                matched.loc[blank_index, "Province"] = fallback.loc[blank_mask, "Province_fallback"].values
 
     matched["Address_final"] = matched["Address"].fillna("Address missing")
     matched["Station_Final"] = matched["Station_Name_master"].fillna(matched["Station_Name"])
@@ -381,9 +516,10 @@ def build_price_table(
     else:
         prices_df = pd.concat([petro_df, esso_df], ignore_index=True)
 
+    latest_petro = load_latest("petro_prices_*.csv")
+    latest_esso = load_latest("esso_prices_*.csv")
+
     if prices_df.empty:
-        latest_petro = load_latest("petro_prices_*.csv")
-        latest_esso = load_latest("esso_prices_*.csv")
         meta = {
             "latest_petro_file": latest_petro.name if latest_petro else "",
             "latest_esso_file": latest_esso.name if latest_esso else "",
@@ -429,9 +565,6 @@ def build_price_table(
 
     prices_df["Savings_per_1000L"] = np.round((avg_all_in - prices_df["All_In_Price"]) * 1000, 0)
     prices_df = prices_df.sort_values(["All_In_Price", "Miles_from_Current", "Station_Name"]).reset_index(drop=True)
-
-    latest_petro = load_latest("petro_prices_*.csv")
-    latest_esso = load_latest("esso_prices_*.csv")
 
     meta = {
         "latest_petro_file": latest_petro.name if latest_petro else "",
