@@ -71,7 +71,7 @@ PRICES_DIR = os.path.join(BASE_DIR, "Prices")
 master_petro = pd.read_csv(os.path.join(BASE_DIR, "Locations", "petro_pass_master.csv"), quotechar='"')
 master_esso = pd.read_csv(os.path.join(BASE_DIR, "Locations", "esso_cardlock_master.csv"), quotechar='"')
 
-st.set_page_config(page_title="OBYR Fuel V4.5", page_icon="⛽", layout="wide")
+st.set_page_config(page_title="OBYR Fuel V5.0", page_icon="⛽", layout="wide")
 st.subheader("Official Dual Network")
 st.caption("✅ Auto-loads latest prices • Address search + GPS")
 
@@ -107,7 +107,7 @@ if current_address:
 
 dest_lat, dest_lon = geocode(dest_address) or (43.69823, -79.58937)
 
-# Load latest (strict date sorting)
+# Load latest (date in filename)
 def load_latest(pattern):
     files = glob.glob(os.path.join(PRICES_DIR, pattern))
     if not files:
@@ -125,7 +125,7 @@ esso_path = load_latest("esso_prices_*.csv")
 if petro_path: st.success(f"✅ Loaded Petro: {os.path.basename(petro_path)}")
 if esso_path: st.success(f"✅ Loaded Esso: {os.path.basename(esso_path)}")
 
-# ====================== LOAD + MATCH (dynamic + safe) ======================
+# ====================== LOAD + MATCH (new strategy) ======================
 petro_df = pd.DataFrame()
 if petro_path:
     df = pd.read_csv(petro_path)
@@ -149,18 +149,19 @@ if petro_path:
 
 esso_df = pd.DataFrame()
 if esso_path:
-    esso_prices = pd.read_csv(esso_path)
-    esso_prices.columns = [c.strip() for c in esso_prices.columns]
-    price_col = next((col for col in esso_prices.columns if any(x in col.lower() for x in ["fuel", "price"])), None)
-    site_col = next((col for col in esso_prices.columns if "site" in col.lower()), None)
-    province_col = next((col for col in esso_prices.columns if "prov" in col.lower()), None)
-    if price_col: esso_prices = esso_prices.rename(columns={price_col: "Price"})
-    if site_col: esso_prices = esso_prices.rename(columns={site_col: "SITE NUMBER"})
-    if province_col: esso_prices = esso_prices.rename(columns={province_col: "Province"})
-    esso_prices = esso_prices.dropna(subset=["Price"]).reset_index(drop=True)
-    esso_prices["Price"] = clean_price(esso_prices["Price"])
-    esso_prices["Province"] = esso_prices["Province"].astype(str).str.strip().str.upper()
-    esso_df = esso_prices.merge(
+    df = pd.read_csv(esso_path)
+    df.columns = [c.strip() for c in df.columns]
+    price_col = next((col for col in df.columns if any(x in col.lower() for x in ["fuel", "price"])), None)
+    site_col = next((col for col in df.columns if "site" in col.lower()), None)
+    province_col = next((col for col in df.columns if "prov" in col.lower()), None)
+    if price_col: df = df.rename(columns={price_col: "Price"})
+    if site_col: df = df.rename(columns={site_col: "SITE NUMBER"})
+    if province_col: df = df.rename(columns={province_col: "Province"})
+    df = df.dropna(subset=["Price"]).reset_index(drop=True)
+    df["Price"] = clean_price(df["Price"])
+    df["Province"] = df["Province"].astype(str).str.strip().str.upper()
+    # New strategy: SITE NUMBER is the reliable key
+    esso_df = df.merge(
         master_esso[["SITE NUMBER", "Station_Name", "Address", "Latitude", "Longitude"]],
         on="SITE NUMBER", how="left"
     )
@@ -221,5 +222,4 @@ col1, col2 = st.columns(2)
 with col1: st.metric("Cheapest for YOU", f"${prices_df['All_In_Price'].iloc[0]:.3f}" if len(prices_df)>0 else "—")
 with col2: st.metric("Your best savings", f"${prices_df['Savings_per_1000L'].iloc[0]:,.0f}" if len(prices_df)>0 else "—")
 
-st.download_button("📥 Download this list", prices_df.to_csv(index=False), f"obyr_fuel_v4_{datetime.now().strftime('%Y-%m-%d')}.csv")
-st.caption(f"© {datetime.now().year} OBYR Transport Inc. • OBYR Fuel V4.5")
+st.download_button("📥 Download this list", prices
