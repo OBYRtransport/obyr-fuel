@@ -1,4 +1,3 @@
-cat > obyr_fuel_v3.py << 'EOF'
 from __future__ import annotations
 
 from datetime import datetime
@@ -197,4 +196,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-EOF
