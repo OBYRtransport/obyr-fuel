@@ -355,6 +355,7 @@ def match_petro(petro_prices: pd.DataFrame, master_petro: pd.DataFrame) -> Tuple
     )
 
     still_unmatched = matched[matched["Address"].isna()].copy()
+
     if not still_unmatched.empty:
         master_station = master_petro.copy()
         master_station["match_name_only"] = master_station["Station_Name"].map(normalize_text)
@@ -377,31 +378,26 @@ def match_petro(petro_prices: pd.DataFrame, master_petro: pd.DataFrame) -> Tuple
             suffixes=("", "_fallback"),
         )
 
+        fallback.index = still_unmatched.index
+
         if "Address_fallback" in fallback.columns:
-            matched.loc[still_unmatched.index, "Address"] = matched.loc[still_unmatched.index, "Address"].fillna(
-                pd.Series(fallback["Address_fallback"].values, index=still_unmatched.index)
-            )
+            matched["Address"] = matched["Address"].where(matched["Address"].notna(), fallback["Address_fallback"])
 
         if "Latitude_fallback" in fallback.columns:
-            matched.loc[still_unmatched.index, "Latitude"] = matched.loc[still_unmatched.index, "Latitude"].fillna(
-                pd.Series(fallback["Latitude_fallback"].values, index=still_unmatched.index)
-            )
+            matched["Latitude"] = matched["Latitude"].where(matched["Latitude"].notna(), fallback["Latitude_fallback"])
 
         if "Longitude_fallback" in fallback.columns:
-            matched.loc[still_unmatched.index, "Longitude"] = matched.loc[still_unmatched.index, "Longitude"].fillna(
-                pd.Series(fallback["Longitude_fallback"].values, index=still_unmatched.index)
-            )
+            matched["Longitude"] = matched["Longitude"].where(matched["Longitude"].notna(), fallback["Longitude_fallback"])
 
         if "Station_Name_fallback" in fallback.columns:
-            matched.loc[still_unmatched.index, "Station_Name_master"] = matched.loc[
-                still_unmatched.index, "Station_Name_master"
-            ].fillna(pd.Series(fallback["Station_Name_fallback"].values, index=still_unmatched.index))
+            matched["Station_Name_master"] = matched["Station_Name_master"].where(
+                matched["Station_Name_master"].notna(),
+                fallback["Station_Name_fallback"],
+            )
 
         if "Province_fallback" in fallback.columns:
-            blank_mask = matched.loc[still_unmatched.index, "Province"].fillna("").eq("")
-            if blank_mask.any():
-                blank_index = still_unmatched.index[blank_mask]
-                matched.loc[blank_index, "Province"] = fallback.loc[blank_mask, "Province_fallback"].values
+            blank_province_mask = matched["Province"].fillna("").eq("") & matched.index.isin(fallback.index)
+            matched.loc[blank_province_mask, "Province"] = fallback.loc[blank_province_mask, "Province_fallback"]
 
     matched["Address_final"] = matched["Address"].fillna("Address missing")
     matched["Station_Final"] = matched["Station_Name_master"].fillna(matched["Station_Name"])
