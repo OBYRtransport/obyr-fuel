@@ -1,72 +1,88 @@
+import pdfplumber
 import pandas as pd
-import os
-from datetime import datetime
+import sys
+import re
+from pathlib import Path
+import subprocess
+import sys as py_sys
 
-print("🚛 OBYR Esso Price Helper v3 — Handles messy Adobe CSV")
+# Auto-install pdfplumber if needed
+try:
+    import pdfplumber
+except ImportError:
+    print("📦 Installing pdfplumber (one-time)...")
+    subprocess.check_call([py_sys.executable, "-m", "pip", "install", "pdfplumber"])
+    print("✅ Installed!")
 
-raw_file = input("\nDrag and drop your raw Esso CSV file here and press Enter: ").strip().strip('"')
+print("📂 Esso PDF → Perfect CSV (Full Automation - FUEL PRICE version)")
 
-if not os.path.exists(raw_file):
-    print("❌ File not found.")
-    input("Press Enter to exit...")
-    exit()
+# Drag & drop support
+if len(sys.argv) > 1:
+    pdf_file = sys.argv[1]
+else:
+    pdf_file = input("Drag & drop your Fuel-pricing_u716_*.pdf here and press Enter: ").strip().strip('"')
 
-# Read the messy CSV
-df = pd.read_csv(raw_file, header=None, low_memory=False)
+# Extract full text from PDF
+all_text = ""
+with pdfplumber.open(pdf_file) as pdf:
+    for page in pdf.pages:
+        text = page.extract_text()
+        if text:
+            all_text += text + "\n"
 
-# Find the header row that contains "SITE NUMBER"
-header_row = None
-for i, row in df.iterrows():
-    row_str = ' '.join(str(x) for x in row if pd.notna(x))
-    if 'SITE NUMBER' in row_str.upper():
-        header_row = i
-        break
+print(f"✅ PDF text extracted")
 
-if header_row is None:
-    print("❌ Could not find SITE NUMBER header.")
-    input("Press Enter to exit...")
-    exit()
+# Regex that reliably captures FUEL PRICE (the pre-tax column you need)
+pattern = r'(\d{6})\s+([A-Za-z\s\-]+?)\s+([A-Z]{2})\s+DIESEL LS.*?\d+\.\d+\s+\d+\.\d+\s+\d+\.\d+\s+\d+\.\d+\s+(\d{3}\.\d)'
+matches = re.findall(pattern, all_text, re.IGNORECASE)
 
-df.columns = df.iloc[header_row]
-df = df.iloc[header_row + 1:].reset_index(drop=True)
+diesel_data = []
+for site, city, province, fuel_price in matches:
+    diesel_data.append({
+        "SITE_NUMBER": site.strip(),
+        "CITY": city.strip(),
+        "PROVINCE": province.strip(),
+        "FUEL_PRICE": fuel_price.strip(),      # ← FUEL PRICE (pre-tax)
+        "EFFECTIVE_DATE": "2026-03-31"
+    })
 
-# Clean column names
-df.columns = [str(col).strip() for col in df.columns]
+diesel = pd.DataFrame(diesel_data)
+print(f"✅ Extracted {len(diesel)} DIESEL LS prices (using FUEL PRICE column)")
 
-# Locate required columns
-site_col = next((c for c in df.columns if "SITE NUMBER" in str(c).upper()), None)
-prov_col = next((c for c in df.columns if "PROVINCE" in str(c).upper()), None)
-price_col = next((c for c in df.columns if "FUEL PRICE" in str(c).upper()), None)
+# Merge with your master directory
+master_path = Path(__file__).parent / "esso_cardlock_master.csv"
+master = pd.read_csv(master_path, on_bad_lines='skip', quoting=3, engine='python')
 
-if not all([site_col, prov_col, price_col]):
-    print("❌ Could not locate required columns.")
-    print("Found columns:", list(df.columns))
-    input("Press Enter to exit...")
-    exit()
+diesel["SITE_NUMBER"] = diesel["SITE_NUMBER"].astype(str)
+master["SITE NUMBER"] = master["SITE NUMBER"].astype(str)
 
-# Keep only needed columns
-df = df[[site_col, prov_col, price_col]].copy()
-df.columns = ["SITE NUMBER", "Province", "Price"]
+merged = diesel.merge(master[["SITE NUMBER", "Station_Name", "Address", "City"]],
+                      left_on="SITE_NUMBER", right_on="SITE NUMBER", how="left")
 
-# Clean and convert Price (this fixes the string error)
-df["Price"] = df["Price"].astype(str).str.strip()
-df["Price"] = pd.to_numeric(df["Price"], errors='coerce')
+# City fallback for the 5 missing sites
+missing = merged[merged["Station_Name"].isna()].copy()
+if not missing.empty:
+    print(f"🔄 Filling {len(missing)} stations by city name...")
+    for idx, row in missing.iterrows():
+        city = str(row["CITY"]).strip()
+        if city:
+            match = master[master["Station_Name"].str.contains(city, case=False, na=False)]
+            if not match.empty:
+                merged.at[idx, "Station_Name"] = match.iloc[0]["Station_Name"]
+                merged.at[idx, "Address"] = match.iloc[0]["Address"]
+                merged.at[idx, "City"] = match.iloc[0]["City"]
 
-# Drop rows where Price could not be converted
-df = df.dropna(subset=["Price"]).reset_index(drop=True)
+final = merged[["SITE_NUMBER", "Station_Name", "CITY", "PROVINCE", "Address", "FUEL_PRICE", "EFFECTIVE_DATE"]]
+final = final.sort_values(by=["PROVINCE", "Station_Name"]).reset_index(drop=True)
 
-# Convert cents to dollars
-df["Price"] = df["Price"] / 100
+# Save
+prices_dir = Path(__file__).parent / "Prices"
+prices_dir.mkdir(exist_ok=True)
+output_csv = prices_dir / f"esso_prices_{final['EFFECTIVE_DATE'].iloc[0]}.csv"
+final.to_csv(output_csv, index=False)
 
-# Today's date for filename
-today = datetime.now().strftime("%Y-%m-%d")
-output_path = os.path.expanduser(f"~/Documents/OBYR Fuel/Prices/esso_prices_{today}.csv")
-
-# Save the clean file
-df.to_csv(output_path, index=False)
-
-print(f"\n✅ SUCCESS! Clean Esso file created:")
-print(f"   {output_path}")
-print(f"   ({len(df)} stations • prices now in dollars • ready for the app)")
-
-input("\nPress Enter to close the helper...")
+print("\n" + "="*70)
+print(f"🎉 SUCCESS! Saved {len(final)} prices → {output_csv}")
+print("   Your main app can now read this file directly.")
+print("\n✅ All done! Press Enter to close...")
+input()

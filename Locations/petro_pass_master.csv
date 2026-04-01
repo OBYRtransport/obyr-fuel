@@ -1,345 +1,357 @@
-Station_Name,Province,"Address",Latitude,Longitude,Network
-MCL ALTAGAS REEF,BC,"Reef, BC",54.634965,-106.918446,Petro
-EDMONTON-YELLOWHEAD,AB,"Yellowhead Trail, Edmonton, AB",53.56,-113.47,Petro
-EDMONTON-50TH ST,AB,"50th Street, Edmonton, AB",53.48,-113.48,Petro
-EDMONTON-118 AVE,AB,"118 Ave, Edmonton, AB",53.56,-113.47,Petro
-FT SASKATCHEWAN,AB,"Fort Saskatchewan, AB",53.71,-113.21,Petro
-EDMONTON-WEST (HUNTERS CNR,AB,"Hunters Corner, Edmonton, AB",53.52,-113.62,Petro
-NISKU,AB,"Nisku, AB",53.48,-113.48,Petro
-GLENEVIS,AB,"Glenevis, AB",53.85,-114.0,Petro
-WASKATENAU,AB,"Waskatenau, AB",54.12,-113.0,Petro
-CAMROSE,AB,"Camrose, AB",53.02,-112.82,Petro
-EDMONTON-ACHESON,AB,"Acheson, AB",53.55,-113.77,Petro
-WETASKIWIN,AB,"Wetaskiwin, AB",52.97,-113.38,Petro
-MCL KLEYSEN,AB,"Kleysen, AB",53.55,-113.77,Petro
-VEGREVILLE,AB,"Vegreville, AB",53.50,-112.05,Petro
-VIKING,AB,"Viking, AB",53.06,-111.78,Petro
-RED DEER-54TH AVE,AB,"54th Ave, Red Deer, AB",52.27,-113.80,Petro
-RED DEER-EDGAR,AB,"Edgar Industrial, Red Deer, AB",52.27,-113.80,Petro
-RED DEER HIGHWAY 2 AND 42,AB,"Highway 2 & 42, Red Deer, AB",52.27,-113.80,Petro
-HARDISTY,AB,"Hardisty, AB",52.67,-111.38,Petro
-WESTLOCK,AB,"Westlock, AB",54.15,-113.85,Petro
-DRAYTON VALLEY-50TH ST,AB,"50th Street, Drayton Valley, AB",53.22,-114.98,Petro
-STETTLER,AB,"Stettler, AB",52.32,-112.72,Petro
-DRAYTON VALLEY-INDUSTRIAL,AB,"Industrial Area, Drayton Valley, AB",53.22,-114.98,Petro
-ROCKY MTN HOUSE,AB,"Rocky Mountain House, AB",52.37,-114.92,Petro
-CORONATION,AB,"Coronation, AB",52.10,-111.45,Petro
-OLDS,AB,"Olds, AB",51.78,-114.10,Petro
-ATHABASCA,AB,"Athabasca, AB",54.72,-113.28,Petro
-EDSON - 63 ST,AB,"63rd Street, Edson, AB",53.58,-116.45,Petro
-VERMILION,AB,"Vermilion, AB",53.35,-110.85,Petro
-CARSTAIRS,AB,"Carstairs, AB",51.55,-114.10,Petro
-CROSSFIELD,AB,"Crossfield, AB",51.43,-114.03,Petro
-THREE HILLS,AB,"Three Hills, AB",51.70,-113.27,Petro
-SUNDRE,AB,"Sundre, AB",51.80,-114.68,Petro
-CALGARY-OGDEN RD,AB,"Ogden Road, Calgary, AB",51.02,-114.05,Petro
-LLOYDMINSTER,AB,"Lloydminster, AB",53.28,-110.00,Petro
-LLOYDMINSTER 63,AB,"Highway 63, Lloydminster, AB",53.28,-110.00,Petro
-CALGARY-MONUMENT,AB,"Monument Road, Calgary, AB",51.08,-114.10,Petro
-DRUMHELLER,AB,"Drumheller, AB",51.46,-112.72,Petro
-BONNYVILLE,AB,"Bonnyville, AB",54.27,-110.75,Petro
-LAC LA BICHE,AB,"Lac La Biche, AB",54.77,-111.97,Petro
-CALGARY-REMINGTON,AB,"Remington, Calgary, AB",51.08,-114.10,Petro
-WHITECOURT-HWY 43,AB,"Highway 43, Whitecourt, AB",54.14,-115.68,Petro
-WHITECOURT-42ND ST,AB,"42nd Street, Whitecourt, AB",54.14,-115.68,Petro
-PROVOST,AB,"Provost, AB",52.35,-110.26,Petro
-FOX CREEK,AB,"Fox Creek, AB",54.39,-116.81,Petro
-SLAVE LAKE-12TH AVE,AB,"12th Ave, Slave Lake, AB",55.28,-114.77,Petro
-SLAVE LAKE-15TH AVE,AB,"15th Ave, Slave Lake, AB",55.28,-114.77,Petro
-HINTON,AB,"Hinton, AB",53.41,-117.58,Petro
-GRASSLAND,AB,"Grassland, AB",55.20,-112.78,Petro
-CALGARY-COUNTRY HILLS,AB,"Country Hills Blvd, Calgary, AB",51.13,-114.07,Petro
-ALDERSYDE,AB,"Aldersyde, AB",50.72,-113.92,Petro
-HANNA,AB,"Hanna, AB",51.63,-111.92,Petro
-COCHRANE-JUMPING POUND,AB,"Jumping Pound, Cochrane, AB",51.19,-114.47,Petro
-VALLEYVIEW,AB,"Valleyview, AB",55.07,-117.29,Petro
-STRATHMORE,AB,"Strathmore, AB",51.05,-113.40,Petro
-BASSANO,AB,"Bassano, AB",50.79,-112.46,Petro
-HIGH PRAIRIE,AB,"High Prairie, AB",55.43,-116.48,Petro
-FORT MCMURRAY PPASS 66,AB,"Fort McMurray, AB",56.73,-111.38,Petro
-HUSSAR,AB,"Hussar, AB",51.04,-112.68,Petro
-VULCAN,AB,"Vulcan, AB",50.40,-113.25,Petro
-BROOKS-AGCOM,AB,"Agcom, Brooks, AB",50.56,-111.90,Petro
-MCL HANGINGSTONE,AB,"Hangingstone, Fort McMurray, AB",56.73,-111.38,Petro
-LETHBRIDGE,AB,"Lethbridge, AB",49.70,-112.85,Petro
-RED EARTH CREEK,AB,"Red Earth Creek, AB",57.60,-115.00,Petro
-PINCHER CREEK,AB,"Pincher Creek, AB",49.48,-114.00,Petro
-CARDSTON,AB,"Cardston, AB",49.20,-113.30,Petro
-WATSON LAKE,YT,"Watson Lake, YT",60.06,-128.71,Petro
-COLD LAKE,AB,"Cold Lake, AB",54.47,-110.18,Petro
-CLAIRMONT,AB,"Clairmont, AB",55.26,-118.79,Petro
-GRANDE PRAIRIE-97TH,AB,"97th Avenue, Grande Prairie, AB",55.17,-118.80,Petro
-FALHER,AB,"Falher, AB",55.73,-117.20,Petro
-REGINA,SK,"Regina, SK",50.45,-104.61,Petro
-PEACE RIVER,AB,"Peace River, AB",56.23,-117.29,Petro
-MCL HAMMERSTONE CON_92701,AB,"Hammerstone, AB",56.73,-111.38,Petro
-MCL BALZAC YAR,AB,"Balzac, AB",51.21,-114.02,Petro
-MCL DEERFOOT UPGRADES,AB,"Deerfoot, Calgary, AB",51.08,-114.05,Petro
-WEYBURN,SK,"Weyburn, SK",49.67,-103.85,Petro
-GRANDE PRAIRIE-116 ST,AB,"116th Street, Grande Prairie, AB",55.17,-118.80,Petro
-MEDICINE HAT-10TH AVE,AB,"10th Avenue, Medicine Hat, AB",50.04,-110.68,Petro
-CHAPLIN,SK,"Chaplin, SK",50.47,-106.65,Petro
-MOOSE JAW,SK,"Moose Jaw, SK",50.39,-105.53,Petro
-REDCLIFF,AB,"Redcliff, AB",50.08,-110.78,Petro
-TABER,AB,"Taber, AB",49.78,-112.15,Petro
-HIGH LEVEL,AB,"High Level, AB",58.52,-117.14,Petro
-SPIRIT RIVER,AB,"Spirit River, AB",55.78,-118.83,Petro
-WINNIPEG-MARION ST,MB,"Marion Street, Winnipeg, MB",49.89,-97.06,Petro
-GRENFELL,SK,"Grenfell, SK",50.41,-102.93,Petro
-MEDICINE HAT-BOX SPRINGS,AB,"Box Springs, Medicine Hat, AB",50.04,-110.68,Petro
-ASSINIBOIA,SK,"Assiniboia, SK",49.63,-105.98,Petro
-FORT MCMURRAY-NORTH,AB,"Fort McMurray North, AB",56.73,-111.38,Petro
-FORT MCMURRAY-SOUTH,AB,"Fort McMurray South, AB",56.73,-111.38,Petro
-SWIFT CURRENT,SK,"Swift Current, SK",50.29,-107.80,Petro
-SASKATOON-51ST ST,SK,"51st Street, Saskatoon, SK",52.12,-106.67,Petro
-SASKATOON-MELVILLE,SK,"Melville Street, Saskatoon, SK",52.12,-106.67,Petro
-BVD - GRENFELL WEST,SK,"Grenfell West, SK",50.41,-102.93,Petro
-MANNING,AB,"Manning, AB",57.00,-117.63,Petro
-RUSSELL,MB,"Russell, MB",50.78,-101.28,Petro
-YORKTON-HWY 16,SK,"Highway 16, Yorkton, SK",51.21,-102.46,Petro
-CORMAN PARK,SK,"Corman Park, SK",52.15,-106.67,Petro
-LAMPMAN,SK,"Lampman, SK",49.38,-102.80,Petro
-MCL HAMMERSTONE_92704,AB,"Hammerstone, Fort McMurray, AB",56.73,-111.38,Petro
-MAIDSTONE,SK,"Maidstone, SK",53.09,-109.28,Petro
-GRAVELBOURG,SK,"Gravelbourg, SK",49.87,-106.55,Petro
-WINNIPEG-DEACONS,MB,"Deacon's Corner, Winnipeg, MB",49.89,-97.06,Petro
-TEULON,MB,"Teulon, MB",50.26,-97.26,Petro
-THE PAS,MB,"The Pas, MB",53.82,-101.25,Petro
-WADENA,SK,"Wadena, SK",51.95,-103.80,Petro
-RADVILLE,SK,"Radville, SK",49.46,-104.34,Petro
-ARBORG,MB,"Arborg, MB",50.91,-97.22,Petro
-PINE FALLS,MB,"Pine Falls, MB",50.57,-96.22,Petro
-PORTAGE LA PRAIRIE,MB,"Portage la Prairie, MB",49.97,-98.29,Petro
-KIPLING,SK,"Kipling, SK",50.13,-102.63,Petro
-ESTEVAN - 4TH ST,SK,"4th Street, Estevan, SK",49.14,-102.99,Petro
-ESTEVAN - CARBON,SK,"Carbon Crescent, Estevan, SK",49.14,-102.99,Petro
-MORRIS,MB,"Morris, MB",49.35,-97.36,Petro
-STOUGHTON,SK,"Stoughton, SK",49.68,-103.00,Petro
-MCL RUTH LAKE,AB,"Ruth Lake, Fort McMurray, AB",56.73,-111.38,Petro
-LA CRETE,AB,"La Crete, AB",58.19,-116.42,Petro
-OXBOW,SK,"Oxbow, SK",49.23,-102.17,Petro
-MANKOTA,SK,"Mankota, SK",49.44,-106.43,Petro
-BRANDON-TCH,MB,"TCH, Brandon, MB",49.85,-99.95,Petro
-SHAUNAVON,SK,"Shaunavon, SK",49.65,-108.42,Petro
-BRANDON-18TH ST,MB,"18th Street, Brandon, MB",49.85,-99.95,Petro
-MAPLE CREEK,SK,"Maple Creek, SK",49.91,-109.48,Petro
-BIGGAR,SK,"Biggar, SK",52.06,-108.00,Petro
-CARLYLE,SK,"Carlyle, SK",49.63,-102.27,Petro
-CARNDUFF,SK,"Carnduff, SK",49.17,-101.79,Petro
-WINKLER,MB,"Winkler, MB",49.18,-97.94,Petro
-DAUPHIN,MB,"Dauphin, MB",51.15,-100.05,Petro
-BVD - CALGARY WEST,AB,"Calgary West, AB",51.08,-114.10,Petro
-ROSETOWN,SK,"Rosetown, SK",51.55,-107.92,Petro
-NEEPAWA,MB,"Neepawa, MB",50.23,-99.47,Petro
-ALIDA,SK,"Alida, SK",49.38,-101.55,Petro
-REDVERS,SK,"Redvers, SK",49.35,-101.30,Petro
-NORTH BATTLEFORD BYPASS,SK,"North Battleford Bypass, SK",52.78,-108.30,Petro
-NORTH BATTLEFORD,SK,"North Battleford, SK",52.78,-108.30,Petro
-PRINCE ALBERT,SK,"Prince Albert, SK",53.20,-105.75,Petro
-HUMBOLDT,SK,"Humboldt, SK",52.20,-105.12,Petro
-UNITY,SK,"Unity, SK",52.44,-109.15,Petro
-EDAM,SK,"Edam, SK",53.19,-108.78,Petro
-MCL PELICAN LAKE,AB,"Pelican Lake, Fort McMurray, AB",56.73,-111.38,Petro
-CRYSTAL CITY (65885),MB,"Crystal City, MB",49.15,-98.95,Petro
-KILLARNEY,MB,"Killarney, MB",49.18,-99.67,Petro
-MIAMI,MB,"Miami, MB",49.37,-98.23,Petro
-THOMPSON,MB,"Thompson, MB",55.74,-97.86,Petro
-KINDERSLEY,SK,"Kindersley, SK",51.47,-109.16,Petro
-MCL JACKFISH,AB,"Jackfish, Fort McMurray, AB",56.73,-111.38,Petro
-MELITA,MB,"Melita, MB",49.27,-100.99,Petro
-RESTON,MB,"Reston, MB",49.55,-101.08,Petro
-VIRDEN,MB,"Virden, MB",49.85,-100.93,Petro
-TISDALE,SK,"Tisdale, SK",52.85,-104.05,Petro
-CARROT RIVER,SK,"Carrot River, SK",53.28,-103.59,Petro
-BVD - WINNIPEG WEST,MB,"Winnipeg West, MB",49.89,-97.06,Petro
+Station_Name,Province,Address,Latitude,Longitude,Network
+MCL DP2Z- BLOCK 80 DEPOT A,,"Block 80 Depot, Fort McMurray, AB",56.73,-111.38,Petro
+ALDERSYDE,AB,"200-64273 Hwy 547 East, Aldersyde, AB",50.696335,-113.887517,Petro
+ATHABASCA,AB,"5306 - 51st Avenue, Athabasca, AB",54.721869,-113.29284,Petro
+BASSANO,AB,"525 - 11th Street, Bassano, AB",51.944507,-103.80147,Petro
+BONNYVILLE,AB,"5602 - 54th Avenue, Bonnyville, AB",54.271396,-110.758946,Petro
+BROOKS-AGCOM,AB,"600 Industrial Road, Brooks, AB",50.554255,-111.885409,Petro
+BVD - CALGARY WEST,AB,"2515 - 50th Avenue S.E., Calgary, AB",51.008043,-113.99944,Petro
+CALGARY ROAD KING,AB,"Road King, Calgary, AB",51.08,-114.1,Petro
+CALGARY-COUNTRY HILLS,AB,"70 Freeport Blvd. N.E., Calgary, AB",51.151436,-114.00841,Petro
+CALGARY-MONUMENT,AB,"215 Monument Place S.E., Calgary, AB",51.052125,-113.997284,Petro
+CALGARY-OGDEN RD,AB,"4022 Ogden Road S.E., Calgary, AB",51.019559,-114.029202,Petro
+CALGARY-REMINGTON,AB,"5215 61st Avenue S.E., Calgary, AB",50.998457,-113.959594,Petro
+CAMROSE,AB,"3901 - 42nd Avenue, Camrose, AB",53.004742,-112.80751,Petro
+CARDSTON,AB,"890 Main Street, Cardston, AB",49.188884,-113.301702,Petro
+CARSTAIRS,AB,"732 Highfield Drive, Carstairs, AB",51.571975,-114.097717,Petro
+CLAIRMONT,AB,"10702 - 79th Ave, Clairmont, AB",55.239277,-118.814113,Petro
 CNRL HORIZON PROJECT,AB,"Horizon Project, Fort McMurray, AB",56.73,-111.38,Petro
-MCL LEISMER,AB,"Leismer, Fort McMurray, AB",56.73,-111.38,Petro
-MEADOW LAKE,SK,"Meadow Lake, SK",54.13,-108.43,Petro
-MCL LONG LAKE,AB,"Long Lake, Fort McMurray, AB",56.73,-111.38,Petro
-MELFORT,SK,"Melfort, SK",52.87,-104.61,Petro
-LARONGE,SK,"La Ronge, SK",55.10,-105.30,Petro
-THUNDER BAY,ON,"Thunder Bay, ON",48.38,-89.29,Petro
-WHITEHORSE-ALASKA HWY,YT,"Alaska Highway, Whitehorse, YT",60.72,-135.05,Petro
-WHITEHORSE-GALENA RD,YT,"Galena Road, Whitehorse, YT",60.72,-135.05,Petro
-MCL PRIMROSE THERMAL,AB,"Primrose Thermal, Fort McMurray, AB",56.73,-111.38,Petro
-KAMINISTIQUIA,ON,"Kaministiquia, ON",48.40,-89.62,Petro
-ENTERPRISE,NT,"Enterprise, NT",60.55,-117.25,Petro
-YELLOWKNIFE,NT,"Yellowknife, NT",62.45,-114.38,Petro
-BVD - NIPIGON WEST,ON,"Nipigon West, ON",49.00,-88.27,Petro
-IGNACE,ON,"Ignace, ON",49.42,-91.65,Petro
-CALGARY ROAD KING,AB,"Road King, Calgary, AB",51.08,-114.10,Petro
-KENORA,ON,"Kenora, ON",49.77,-94.49,Petro
-STEINBACH,MB,"Steinbach, MB",49.53,-96.68,Petro
-ALTONA,MB,"Altona, MB",49.10,-97.56,Petro
-MCL DP2Z- BLOCK 80 DEPOT A,AB,"Block 80 Depot, Fort McMurray, AB",56.73,-111.38,Petro
-DRYDEN,ON,"Dryden, ON",49.78,-92.83,Petro
-SIOUX LOOKOUT,ON,"Sioux Lookout, ON",50.10,-91.92,Petro
-MCL WHISKEY JACK,AB,"Whiskey Jack, Fort McMurray, AB",56.73,-111.38,Petro
+COCHRANE-JUMPING POUND,AB,"Hwy 1 and Hwy 22 (Cochrane Turnoff), Cochrane, AB",51.087701,-114.4752,Petro
+COLD LAKE,AB,"5011 - 47th Ave., Cold Lake, AB",54.409684,-110.206942,Petro
+CORONATION,AB,"4426 Railway Avenue, Coronation, AB",52.088957,-111.438993,Petro
+CROSSFIELD,AB,"283188 Range Road 293, Crossfield, AB",51.413812,-114.000516,Petro
+DEPOT,AB,"Block 80 Depot, Fort McMurray, AB",56.73,-111.38,Petro
+DRAYTON VALLEY-50TH ST,AB,"2054 50th Street, Drayton Valley, AB",53.1935937,-114.9766707,Petro
+DRAYTON VALLEY-INDUSTRIAL,AB,"5010 Industrial Road, Drayton Valley, AB",53.226404,-114.978458,Petro
+DRUMHELLER,AB,"510 Premier Road, Drumheller, AB",51.461494,-112.728736,Petro
+EDMONTON-118 AVE,AB,"15630 - 118th Avenue, Edmonton, AB",53.571129,-113.59138,Petro
+EDMONTON-50TH ST,AB,"8025 - 50th Street, Edmonton, AB",53.516669,-113.417503,Petro
+EDMONTON-ACHESON,AB,"#4, 53016 Hwy. 60, Acheson Park, Spruce Grove, Edmonton, AB",53.548075,-113.767832,Petro
+EDMONTON-WEST (HUNTERS CNR,AB,"Hwy 16 & Hwy 60, Township Road 531A, Edmonton, AB",53.565076,-113.761293,Petro
+EDMONTON-YELLOWHEAD,AB,"6031 - 125th Avenue, Edmonton, AB",53.56507,-113.760225,Petro
+EDSON - 63 ST,AB,"6330 - 4 Avenue, Edson, AB",53.576512,-116.4565,Petro
+FALHER,AB,"Hwy. 49 & Main Street, Falher, AB",55.725156,-117.202578,Petro
+FORT MCMURRAY PPASS 66,AB,"365 MacAlpine Crescent, Fort McMurray, AB",56.668561,-111.344724,Petro
+FORT MCMURRAY-NORTH,AB,"145/165 Taiganova Cres, Fort McMurray, AB",56.77177,-111.419435,Petro
+FORT MCMURRAY-SOUTH,AB,"365 MacAlpine Crescent, Fort McMurray, AB",56.668561,-111.344724,Petro
+FOX CREEK,AB,"109 - 1st Ave., Fox Creek, AB",54.393084,-116.799431,Petro
+FT SASKATCHEWAN,AB,"11128 - 88th Avenue, Fort Saskatchewan, AB",53.706227,-113.196334,Petro
+GLENEVIS,AB,"Glenevis, AB",53.85,-114.0,Petro
+GRANDE PRAIRIE-116 ST,AB,"116th Street, Grande Prairie, AB",55.17,-118.8,Petro
+GRANDE PRAIRIE-97TH,AB,"11410 - 97th Avenue, Grande Prairie, AB",55.167474,-118.83795,Petro
+GRASSLAND,AB,"4703 50 Avenue, Grassland, AB",54.819493,-112.678185,Petro
+HANNA,AB,"202 Palliser Trail, Hanna, AB",51.640088,-111.941832,Petro
+HARDISTY,AB,"Highway #881, Hardisty, AB",52.670127,-111.314426,Petro
+HIGH LEVEL,AB,"11915 - 95 Street, High Level, AB",58.498367,-117.14749,Petro
+HIGH PRAIRIE,AB,"5401 - 53rd Ave., High Prairie, AB",55.432569,-116.507467,Petro
+HINTON,AB,"470 Carmichael Lane, Hinton, AB",53.396608,-117.600929,Petro
+HUSSAR,AB,"133 - 2nd Avenue East, Hussar, AB",51.039889,-112.679586,Petro
+LA CRETE,AB,"La Crete, AB",58.19,-116.42,Petro
+LAC LA BICHE,AB,"14072 Stanley Drive, Lac La Biche, AB",54.762349,-112.010958,Petro
+LETHBRIDGE,AB,"3240 - 2nd Avenue North, Lethbridge, AB",49.700455,-112.790548,Petro
+LLOYDMINSTER,AB,"5904 - 44th Street, Lloydminster, AB",53.278571,-110.030801,Petro
+LLOYDMINSTER 63,AB,"5904 - 44th Street, Lloydminster, AB",53.278571,-110.030801,Petro
+MANNING,AB,"Hwy 35, Manning, AB",56.944342,-117.624178,Petro
 MCL ARCHIEWAY,AB,"Archieway, Fort McMurray, AB",56.73,-111.38,Petro
-MCL HUSKY RD,AB,"Husky Road, Fort McMurray, AB",56.73,-111.38,Petro
+MCL BALZAC YAR,AB,"Balzac, AB",51.21,-114.02,Petro
 MCL CNRL PIKE CAMP,AB,"CNRL Pike Camp, Fort McMurray, AB",56.73,-111.38,Petro
-RED LAKE,ON,"Red Lake, ON",51.04,-93.83,Petro
+MCL DEERFOOT UPGRADES,AB,"Deerfoot, Calgary, AB",51.08,-114.05,Petro
+MCL DP2Z- BLOCK 80 DEPOT A,AB,"Block 80 Depot, Fort McMurray, AB",56.73,-111.38,Petro
+MCL HAMMERSTONE CON_92701,AB,"Hammerstone, AB",56.73,-111.38,Petro
+MCL HAMMERSTONE_92704,AB,"Hammerstone, Fort McMurray, AB",56.73,-111.38,Petro
+MCL HANGINGSTONE,AB,"Hangingstone, Fort McMurray, AB",56.73,-111.38,Petro
+MCL HUSKY RD,AB,"Husky Road, Fort McMurray, AB",56.73,-111.38,Petro
+MCL JACKFISH,AB,"Jackfish, Fort McMurray, AB",56.73,-111.38,Petro
 MCL JACKFISH TA,AB,"Jackfish TA, Fort McMurray, AB",56.73,-111.38,Petro
-PRINCE GEORGE-GREAT ST,BC,"Great Street, Prince George, BC",53.92,-122.75,Petro
-PRINCE GEORGE-HARTWAY,BC,"Hartway, Prince George, BC",53.92,-122.75,Petro
-FORT ST JOHN,BC,"Fort St. John, BC",56.25,-120.85,Petro
-FORT NELSON,BC,"Fort Nelson, BC",58.80,-122.70,Petro
-QUESNEL,BC,"Quesnel, BC",52.98,-122.49,Petro
-DAWSON CREEK,BC,"Dawson Creek, BC",55.76,-120.24,Petro
-MACKENZIE,BC,"Mackenzie, BC",55.34,-123.09,Petro
-GLENCOE,ON,"Glencoe, ON",42.74,-81.71,Petro
-KAMLOOPS-TCH WEST,BC,"Kamloops, BC",50.67,-120.32,Petro
-KAMLOOPS-TCH EAST,BC,"Kamloops, BC",50.67,-120.32,Petro
-LONDON-CLARKE ROAD,ON,"Clarke Road, London, ON",42.98,-81.20,Petro
-LONDON-WILTON GROVE,ON,"Wilton Grove Road, London, ON",42.93,-81.20,Petro
-DORCHESTER WEST,ON,"Dorchester, ON",42.98,-81.05,Petro
-THORNHILL/TERRACE PPASS,BC,"Thornhill, BC",54.52,-128.58,Petro
-TERRACE,BC,"Terrace, BC",54.52,-128.58,Petro
-SARNIA,ON,"Sarnia, ON",42.97,-82.38,Petro
-KITCHENER,ON,"King St E, Kitchener, ON",43.4470,-80.4800,Petro
-LANGTON,ON,"Langton, ON",42.68,-80.55,Petro
-EXETER,ON,"Exeter, ON",43.35,-81.48,Petro
-NORWICH,ON,"Norwich, ON",42.99,-80.60,Petro
-BOTHWELL,ON,"Bothwell, ON",42.63,-81.87,Petro
-VERNON,BC,"Vernon, BC",50.27,-119.27,Petro
-TORONTO-NORTH QUEEN,ON,"North Queen Street, Toronto, ON",43.6200,-79.5500,Petro
-MISSISSAUGA-ATLANTIC,ON,"Atlantic Avenue, Mississauga, ON",43.6200,-79.5500,Petro
-MISSISSAUGA-DIXIE&DREW,ON,"Dixie Road & Drew Road, Mississauga, ON",43.6205,-79.5654,Petro
-MOUNT FOREST,ON,"Mount Forest, ON",43.98,-80.73,Petro
-BRAMPTON-INTERMODAL,ON,"Intermodal, Brampton, ON",43.7120,-79.7200,Petro
-CHATHAM,ON,"Chatham, ON",42.4000,-82.2000,Petro
-BVD - COMBER WEST,ON,"Comber West, ON",42.23,-82.55,Petro
-ST-THOMAS PETRO-PASS,ON,"St. Thomas, ON",42.7800,-81.2000,Petro
-BVD - COMBER EAST,ON,"Comber East, ON",42.23,-82.55,Petro
-REXDALE,ON,"Rexdale, Toronto, ON",43.7200,-79.5500,Petro
-WINGHAM  22716,ON,"Wingham, ON",43.89,-81.31,Petro
-HORNBY,ON,"Hornby, ON",43.5800,-79.7800,Petro
-SALMON ARM,BC,"Salmon Arm, BC",50.70,-119.28,Petro
-GOLDEN,BC,"Golden, BC",51.30,-116.97,Petro
-MILTON,ON,"Milton, ON",43.51,-79.88,Petro
-KELOWNA-WESTBANK,BC,"Westbank, Kelowna, BC",49.84,-119.58,Petro
-KELOWNA-ACLAND RD,BC,"Acland Road, Kelowna, BC",49.88,-119.45,Petro
-INVERMERE PPASS,BC,"Invermere, BC",50.50,-116.03,Petro
-LISTOWEL,ON,"Listowel, ON",43.73,-80.95,Petro
-BURLINGTON,ON,"Burlington, ON",43.3250,-79.8000,Petro
-CONCORD,ON,"Concord, Vaughan, ON",43.8200,-79.4800,Petro
-SUMMERSTOWN,ON,"Summerstown, ON",45.20,-74.55,Petro
-NORTH YORK-STEELES,ON,"Steeles Avenue, North York, ON",43.7800,-79.4200,Petro
-WINDSOR-COUNTY RD 46,ON,"County Road 46, Windsor, ON",42.3000,-82.9500,Petro
-PENTICTON,BC,"Penticton, BC",49.50,-119.59,Petro
-REVELSTOKE,BC,"Revelstoke, BC",50.99,-118.20,Petro
-CLARKSON,ON,"Clarkson, Mississauga, ON",43.5500,-79.6500,Petro
-100 MILE HOUSE,BC,"100 Mile House, BC",51.64,-121.30,Petro
-SMITHERS,BC,"Smithers, BC",54.78,-127.18,Petro
-FLAMBOROUGH,ON,"Flamborough, ON",43.32,-79.98,Petro
-VAUGHAN,ON,"Vaughan, ON",43.8500,-79.5000,Petro
-SPARWOOD,BC,"Sparwood, BC",49.73,-114.89,Petro
-CRANBROOK,BC,"Cranbrook, BC",49.51,-115.77,Petro
-WOODSTOCK,ON,"Woodstock, ON",43.13,-80.75,Petro
-COOKSTOWN,ON,"Cookstown, ON",44.19,-79.70,Petro
-WATERLOO,ON,"Waterloo, ON",43.47,-80.52,Petro
-BOWMANVILLE,ON,"Bowmanville, ON",43.9100,-78.6800,Petro
-ST. CATHARINES,ON,"St. Catharines, ON",43.18,-79.24,Petro
-PICKERING,ON,"Pickering, ON",43.8300,-79.0800,Petro
-BARRIE,ON,"Barrie, ON",44.3800,-79.7000,Petro
-NEWMARKET,ON,"Newmarket, ON",44.06,-79.46,Petro
-BRADFORD (SITE 04041),ON,"Bradford, ON",44.11,-79.57,Petro
-SIMCOE,ON,"Simcoe, ON",42.86,-80.49,Petro
-GUELPH,ON,"Guelph, ON",43.55,-80.25,Petro
-HAMILTON-KENORA AVE,ON,"Kenora Avenue, Hamilton, ON",43.2400,-79.8500,Petro
-HAMILTON-PARKDALE,ON,"Parkdale Avenue, Hamilton, ON",43.2600,-79.8200,Petro
-NAKUSP,BC,"Nakusp, BC",50.24,-117.80,Petro
-ORONO,ON,"Orono, ON",43.97,-78.62,Petro
-KITWANGA,BC,"Kitwanga, BC",55.12,-128.07,Petro
-COLLINGWOOD,ON,"Collingwood, ON",44.48,-80.22,Petro
-STAYNER,ON,"Stayner, ON",44.42,-80.09,Petro
-DUNNVILLE,ON,"Dunnville, ON",42.88,-79.62,Petro
-HOUSTON,BC,"Houston, BC",54.40,-126.67,Petro
-FORT ERIE,ON,"Fort Erie, ON",42.93,-78.92,Petro
-WILLIAMS LAKE-GILL,BC,"Gill Road, Williams Lake, BC",52.13,-122.14,Petro
-WILLIAMS LAKE-COLLIER,BC,"Collier Road, Williams Lake, BC",52.13,-122.14,Petro
-FERGUS,ON,"Fergus, ON",43.70,-80.37,Petro
-ORANGEVILLE,ON,"Orangeville, ON",43.92,-80.10,Petro
-OSHAWA,ON,"Oshawa, ON",43.9000,-78.8500,Petro
-ORILLIA PETRO PASS,ON,"Orillia, ON",44.6100,-79.4200,Petro
-GRAND FORKS,BC,"Grand Forks, BC",49.03,-118.45,Petro
-WELLAND,ON,"Welland, ON",42.99,-79.25,Petro
-MCL BLACKWATER COLD,BC,"Blackwater, BC",53.00,-123.00,Petro
-NIAGARA FALLS,ON,"Niagara Falls, ON",43.10,-79.08,Petro
-HAGERSVILLE,ON,"Hagersville, ON",42.96,-80.05,Petro
-HUNTSVILLE,ON,"Huntsville, ON",45.33,-79.22,Petro
-OWEN SOUND,ON,"Owen Sound, ON",44.57,-80.94,Petro
-MCL TCE - MT BRACEY,BC,"Mount Bracey, BC",53.00,-123.00,Petro
-PETERBOROUGH  (22718),ON,"Peterborough, ON",44.30,-78.32,Petro
-BVD - SARNIA WEST,ON,"Sarnia West, ON",42.97,-82.38,Petro
-NORTH BAY-HWY 11,ON,"Highway 11, North Bay, ON",46.3100,-79.4600,Petro
-BRAMPTON-ARMBRO,ON,"Armbro Road, Brampton, ON",43.7120,-79.7200,Petro
-BVD - KAMLOOPS WEST,BC,"Kamloops West, BC",50.67,-120.32,Petro
-TIMMINS-MONETA,ON,"Moneta, Timmins, ON",48.47,-81.33,Petro
-BVD - NIAGARA-ON-THE-LAKE,ON,"Niagara-on-the-Lake, ON",43.25,-79.07,Petro
-SUDBURY-BARRYDOWNE,ON,"Barrydowne Road, Sudbury, ON",46.4900,-80.9500,Petro
-SUDBURY-REGENT,ON,"Regent Street, Sudbury, ON",46.4900,-80.9500,Petro
-PRINCE RUPERT,BC,"Prince Rupert, BC",54.31,-130.32,Petro
-OTTAWA-GLOUCESTER,ON,"Gloucester, Ottawa, ON",45.4200,-75.6200,Petro
-BVD - MISSISSAUGA WEST,ON,"Mississauga West, ON",43.6200,-79.5500,Petro
-BVD - BRAMPTON EAST,ON,"Brampton East, ON",43.7120,-79.7200,Petro
-BVD - BRAMPTON WEST,ON,"Brampton West, ON",43.7120,-79.7200,Petro
-BVD - MISSISSAUGA EAST,ON,"Mississauga East, ON",43.6200,-79.5500,Petro
-BVD - MILTON WEST,ON,"Milton West, ON",43.51,-79.88,Petro
-OTTAWA-NEPEAN,ON,"Nepean, Ottawa, ON",45.35,-75.72,Petro
-ST ISIDORE,ON,"St. Isidore, ON",45.39,-75.09,Petro
-BVD - CORNWALL EAST,ON,"Cornwall East, ON",45.02,-74.73,Petro
-BVD - CORNWALL WEST,ON,"Cornwall West, ON",45.02,-74.73,Petro
-KINGSTON-CENTENNIAL WEST,ON,"Kingston, ON",44.2300,-76.5000,Petro
-MCL HUNTER CREEK CGL,BC,"Hunter Creek, BC",54.00,-123.00,Petro
-BVD - SAULT STE MARIE,ON,"Sault Ste. Marie, ON",46.52,-84.35,Petro
-NEW LISKEARD,ON,"New Liskeard, ON",47.51,-79.68,Petro
-BVD - NORTH BAY WEST,ON,"North Bay West, ON",46.31,-79.46,Petro
-BVD - COCHRANE,ON,"Cochrane, ON",49.07,-81.02,Petro
-MCL ROYAL CAMP MILE 109,BC,"Royal Camp Mile 109, BC",54.00,-123.00,Petro
-WINDSOR,NS,"Windsor, NS",44.99,-64.13,Petro
-WILEVILLE,NS,"Wileville, NS",44.40,-64.50,Petro
-WILMOT,NS,"Wilmot, NS",44.96,-65.00,Petro
-MCL ROYAL CAMP MILE 147,BC,"Royal Camp Mile 147, BC",54.00,-123.00,Petro
-MONCTON,NB,"Moncton, NB",46.0900,-64.7800,Petro
-GRAND FALLS,NB,"Grand Falls, NB",47.04,-67.74,Petro
-YARMOUTH,NS,"Yarmouth, NS",43.84,-66.11,Petro
-BVD - MEDUCTIC WEST,NB,"Meductic West, NB",46.15,-67.49,Petro
-MONT JOLI,QC,"Mont-Joli, QC",48.59,-68.19,Petro
-CHAMBORD,QC,"Chambord, QC",48.43,-72.06,Petro
-CHICOUTIMI,QC,"Chicoutimi, QC",48.43,-71.07,Petro
-VILLE D'ANJOU,QC,"Ville d'Anjou, QC",45.61,-73.57,Petro
-ST NICOLAS,QC,"St-Nicolas, QC",46.70,-71.38,Petro
-CHIBOUGAMAU,QC,"Chibougamau, QC",49.91,-74.37,Petro
-STE FOY,QC,"Ste-Foy, Quebec City, QC",46.78,-71.28,Petro
-VANIER,QC,"Vanier, QC",46.81,-71.29,Petro
-LACHINE,QC,"Lachine, QC",45.43,-73.66,Petro
-LAVAL,QC,"Laval, QC",45.62,-73.67,Petro
-STE JULIE,QC,"Ste-Julie, QC",45.58,-73.33,Petro
-BAIE COMEAU,QC,"Baie-Comeau, QC",49.22,-68.15,Petro
-MONT-LAURIER,QC,"Mont-Laurier, QC",46.55,-75.50,Petro
-ST LAURENT,QC,"St-Laurent, QC",45.51,-73.66,Petro
-L'ASSOMPTION,QC,"L'Assomption, QC",45.81,-73.43,Petro
-AMOS,QC,"Amos, QC",48.57,-78.12,Petro
-NAPIERVILLE,QC,"Napierville, QC",45.19,-73.41,Petro
-STE EULALIE,QC,"Ste-Eulalie, QC",46.11,-72.29,Petro
-TROIS RIVIERES,QC,"Trois-Rivières, QC",46.35,-72.55,Petro
-ST JEAN-PORT JOLI,QC,"St-Jean-Port-Joli, QC",47.21,-70.27,Petro
-ROUYN-NORANDA,QC,"Rouyn-Noranda, QC",48.24,-79.02,Petro
-GRANBY,QC,"Granby, QC",45.40,-72.73,Petro
-VAL D'OR-EAST,QC,"Val-d'Or East, QC",48.10,-77.78,Petro
-SHERBROOKE,QC,"Sherbrooke, QC",45.40,-71.90,Petro
-GATINEAU,QC,"Gatineau, QC",45.48,-75.70,Petro
-ABBOTSFORD,BC,"Abbotsford, BC",49.05,-122.30,Petro
+MCL KLEYSEN,AB,"Kleysen, AB",53.55,-113.77,Petro
+MCL LEISMER,AB,"Leismer, Fort McMurray, AB",56.73,-111.38,Petro
+MCL LONG LAKE,AB,"Long Lake, Fort McMurray, AB",56.73,-111.38,Petro
+MCL PELICAN LAKE,AB,"Pelican Lake, Fort McMurray, AB",56.73,-111.38,Petro
+MCL PRIMROSE THERMAL,AB,"Primrose Thermal, Fort McMurray, AB",56.73,-111.38,Petro
+MCL RUTH LAKE,AB,"Ruth Lake, Fort McMurray, AB",56.73,-111.38,Petro
+MCL WHISKEY JACK,AB,"Whiskey Jack, Fort McMurray, AB",56.73,-111.38,Petro
+MEDICINE HAT-10TH AVE,AB,"1802 - 10th Avenue S.W., Medicine Hat, AB",50.022017,-110.710183,Petro
+MEDICINE HAT-BOX SPRINGS,AB,"2900 Box Springs Blvd. NW, Medicine Hat, AB",50.072869,-110.755255,Petro
+NISKU,AB,"Jct of Sparrow Dr & Hwy. 625, Nisku, AB",53.337022,-113.542768,Petro
+OLDS,AB,"4517 46 Avenue, Olds, AB",51.795256,-114.095906,Petro
+PEACE RIVER,AB,"7510 - 99th Ave., Peace River, AB",56.234576,-117.343428,Petro
+PINCHER CREEK,AB,"1093 Main St., Pincher Creek, AB",49.485719,-113.93223,Petro
+PROVOST,AB,"(PC38506, 4413 - 57 Avenue (Hwy #13 & 44th Street), Provost, AB",52.360866,-110.257019,Petro
+RED DEER HIGHWAY 2 AND 42,AB,"Highway 2 & 42, Red Deer, AB",52.27,-113.8,Petro
+RED DEER-54TH AVE,AB,"4323 - 54th Avenue, Red Deer, AB",52.26387,-113.822144,Petro
+RED DEER-EDGAR,AB,"8009 Edgar Industrial Park, Red Deer, AB",52.314303,-113.840214,Petro
+RED EARTH CREEK,AB,"Hwy. 88, Red Earth Creek, AB",56.531403,-115.307769,Petro
+REDCLIFF,AB,"1700 Broadway Ave East, Redcliff, AB",50.077158,-110.762309,Petro
+ROCKY MTN HOUSE,AB,"4703 - 45th Street, Rocky Mountain House, AB",52.370353,-114.909471,Petro
+SLAVE LAKE-12TH AVE,AB,"701 - 12th Ave. N.E., Slave Lake, AB",55.291909,-114.760094,Petro
+SLAVE LAKE-15TH AVE,AB,"901 - 15th Ave. S.E., Slave Lake, AB",55.269239,-114.77211,Petro
+SPIRIT RIVER,AB,"5211 - 49 Avenue, Spirit River, AB",55.781527,-118.838143,Petro
+STETTLER,AB,"3803 - 47th Avenue, Stettler, AB",52.322783,-112.68018,Petro
+STRATHMORE,AB,"100 Ridge Road, Strathmore, AB",51.038223,-113.389817,Petro
+SUNDRE,AB,"Jct. Hwy. #22 & Hwy. #27, Sundre, AB",51.794664,-114.663486,Petro
+TABER,AB,"6215 - 56th Avenue, Taber, AB",49.791698,-112.127559,Petro
+THREE HILLS,AB,"1221 2nd Street N., Three Hills, AB",51.706928,-113.254988,Petro
+VALLEYVIEW,AB,"Hwy. #43, Valleyview, AB",55.051085,-117.280211,Petro
+VEGREVILLE,AB,"4744 50 Ave., Vegreville, AB",53.492236,-112.046041,Petro
+VERMILION,AB,"5105 - 47 Ave., Vermilion, AB",53.350161,-110.856525,Petro
+VIKING,AB,"5207 - 51st Ave., Viking, AB",53.094926,-111.783335,Petro
+VULCAN,AB,"Hwy 23, 108 Service Road, Vulcan, AB",50.406353,-113.255069,Petro
+WASKATENAU,AB,"19338 Hwy 28, Waskatenau, AB",54.100461,-112.788133,Petro
+WESTLOCK,AB,"10560 - 100th St., Westlock, AB",54.152971,-113.844465,Petro
+WETASKIWIN,AB,"5020 - 56th St., Wetaskiwin, AB",52.971968,-113.390568,Petro
+WHITECOURT-42ND ST,AB,"4135 - 42nd St., Whitecourt, AB",54.144933,-115.712661,Petro
+WHITECOURT-HWY 43,AB,"5503 Kepler St. W., Whitecourt, AB",54.13117,-115.666651,Petro
+100 MILE HOUSE,BC,"380 Exeter Station Road, 100 Mile House, BC",51.65047,-121.307495,Petro
+ABBOTSFORD,BC,"30650 South Fraser Way, Abbotsford, BC",49.05,-122.3,Petro
+BVD - KAMLOOPS WEST,BC,"175 Kokanee Way, Kamloops, BC",50.661133,-120.120768,Petro
+CAMPBELL RIVER,BC,"1720 Maple Street, Campbell River, BC",50.03197,-125.264252,Petro
+CHILLIWACK,BC,"45461 Yale Road West, Exit #119, Chilliwack, BC",49.147433,-121.965741,Petro
 CHILLIWACK W-GREENDALE,BC,"Greendale, Chilliwack, BC",49.17,-121.95,Petro
-CHILLIWACK,BC,"Chilliwack, BC",49.17,-121.95,Petro
-MATAGAMI,QC,"Matagami, QC",49.76,-76.63,Petro
-MCL CAMPBELL RIVER TEMP PP,BC,"Campbell River Temp, BC",50.03,-125.27,Petro
-NANAIMO,BC,"Nanaimo, BC",49.17,-123.94,Petro
-DUNCAN,BC,"Duncan, BC",48.78,-123.71,Petro
-COURTENAY,BC,"Courtenay, BC",49.69,-124.99,Petro
-CAMPBELL RIVER,BC,"Campbell River, BC",50.03,-125.27,Petro
+COQUITLAM,BC,"78 Glacier Street, (Mayfair Industrial Park), Coquitlam, BC",49.230112,-122.817761,Petro
+COURTENAY,BC,"850 - 11th Street, Courtenay, BC",49.683732,-125.002157,Petro
+CRANBROOK,BC,"1814 Theatre Road, Cranbrook, BC",49.683568,-125.001344,Petro
+DAWSON CREEK,BC,"Hart Highway #97 & Dangerous Goods Rte, Dawson Creek, BC",55.767171,-120.275702,Petro
+DELTA,BC,"10178 Nordel Court, (Nordel Business Park), Delta, BC",49.148987,-122.939849,Petro
+DUNCAN,BC,"2935 Jacobs Road, Duncan, BC",48.768731,-123.700857,Petro
+FORT NELSON,BC,"Mile 293, Alaska Hwy., Fort Nelson, BC",58.742592,-122.680375,Petro
+FORT ST JOHN,BC,"9516 78 St, Fort St John, BC",56.25,-120.85,Petro
 GOLD RIVER,BC,"Gold River, BC",49.76,-126.12,Petro
-COQUITLAM,BC,"Coquitlam, BC",49.28,-122.79,Petro
-VANCOUVER,BC,"Vancouver, BC",49.2800,-123.1200,Petro
-DELTA,BC,"Delta, BC",49.08,-123.06,Petro
+GOLDEN,BC,"820 - 10th Avenue, Golden, BC",51.3045,-116.969805,Petro
+GRAND FORKS,BC,"7890 Donaldson Drive, Grand Forks, BC",49.033669,-118.468934,Petro
+HOUSTON,BC,"2950 - 5th St. W, Houston, BC",54.397874,-126.661313,Petro
+INVERMERE PPASS,BC,"Invermere, BC",50.5,-116.03,Petro
+KAMLOOPS-TCH EAST,BC,"1639 East TransCanada Hwy., (Hwy. #1 & Hwy. #5), Kamloops, BC",50.673285,-120.294585,Petro
+KAMLOOPS-TCH WEST,BC,"1885 West TransCanada Hwy., Exit 366, Kamloops, BC",50.659283,-120.397239,Petro
+KELOWNA-ACLAND RD,BC,"2780 Acland Road, Kelowna, BC",49.926099,-119.384265,Petro
+KELOWNA-WESTBANK,BC,"Hwy. #97 South, 1855 Ross Road, Kelowna, BC",49.92595,-119.384399,Petro
+KITWANGA,BC,"Junction of Hwy. #37 & Hwy. #16, Kitwanga, BC",55.095984,-128.074582,Petro
+MACKENZIE,BC,"5325 Ritchie Road, Mackenzie, BC",55.309902,-123.152232,Petro
+MCL ALTAGAS REEF,BC,"Reef, BC",54.634965,-106.918446,Petro
+MCL BLACKWATER COLD,BC,"Blackwater, BC",53.0,-123.0,Petro
+MCL CAMPBELL RIVER TEMP PP,BC,"1720 Maple Street, Campbell River, BC",50.03197,-125.264252,Petro
+MCL HUNTER CREEK CGL,BC,"Hunter Creek, BC",54.0,-123.0,Petro
+MCL ROYAL CAMP MILE 109,BC,"Royal Camp Mile 109, BC",54.0,-123.0,Petro
+MCL ROYAL CAMP MILE 147,BC,"Royal Camp Mile 147, BC",54.0,-123.0,Petro
+MCL TCE - MT BRACEY,BC,"Mount Bracey, BC",53.0,-123.0,Petro
+MILE HOUSE,BC,"380 Exeter Station Road, 100 Mile House, BC",51.65047,-121.307495,Petro
+NAKUSP,BC,"722 - 10TH AVENUE NW, Nakusp, BC",50.249167,-117.806944,Petro
+NANAIMO,BC,"30 Maki Road, Nanaimo, BC",49.1305,-123.91552,Petro
+PENTICTON,BC,"466 Okanagan Avenue East, Penticton, BC",49.478749,-119.572771,Petro
+PRINCE GEORGE-GREAT ST,BC,"1064 Great St., Prince George, BC",53.978194,-122.769674,Petro
+PRINCE GEORGE-HARTWAY,BC,"5435 Hartway Drive, Prince George, BC",53.878466,-122.739977,Petro
+PRINCE RUPERT,BC,"Prince Rupert, BC",54.31,-130.32,Petro
+QUESNEL,BC,"1298 Hwy 97 N, Quesnel, BC",52.994136,-122.506181,Petro
+REVELSTOKE,BC,"722 Hwy #23 South & Nixon Road (Excel Tire), Revelstoke, BC",51.000091,-118.226398,Petro
+SALMON ARM,BC,"4941 - 46th Avenue S.E. (Industrial Park), Salmon Arm, BC",50.66639,-119.228064,Petro
+SMITHERS,BC,"Tatlow Rd. & Pacific St., Smithers, BC",54.76743,-127.145108,Petro
+SPARWOOD,BC,"725 Douglas Fir Road, Sparwood, BC",49.712063,-114.894387,Petro
+TERRACE,BC,"5138 Keith Avenue, Terrace, BC",54.513795,-128.623509,Petro
+TERRACE PPASS,BC,"3914 Desjardins Avenue, Terrace Thornhill, BC",54.514367,-128.542116,Petro
+THORNHILL/TERRACE PPASS,BC,"3914 Desjardins Avenue, Terrace Thornhill, BC",54.514367,-128.542116,Petro
+VANCOUVER,BC,"1510 Powell St., Vancouver, BC",49.283162,-123.07374,Petro
+VERNON,BC,"3308 - 48th Avenue, Vernon, BC",50.281864,-119.275373,Petro
+WILLIAMS LAKE-COLLIER,BC,"4620 Collier Place, Williams Lake, BC",52.165206,-122.162175,Petro
+WILLIAMS LAKE-GILL,BC,"1041 Gill Road BCR Industrial Site, Williams Lake, BC",52.120295,-122.127607,Petro
+ALTONA,MB,"Altona, MB",49.1,-97.56,Petro
+ARBORG,MB,"Highway 7 & 68, Arborg, MB",50.902123,-97.221038,Petro
+BRANDON-18TH ST,MB,"1525 - 18th Street, Brandon, MB",49.826221,-99.961783,Petro
+BRANDON-TCH,MB,"210 Highland Ave, TransCanada Hwy. #1 & Hwy. #1A, Brandon, MB",49.886319,-99.941844,Petro
+BVD - WINNIPEG WEST,MB,"425 Oak Point Highway, Winnipeg, MB",49.937997,-97.223708,Petro
+CRYSTAL CITY (65885),MB,"222 Broadway Street South, Crystal City, MB",49.144987,-98.950542,Petro
+DAUPHIN,MB,"Hwy 5 & Hwy 10A West, Dauphin, MB",51.155181,-100.060231,Petro
+KILLARNEY,MB,"430 Finlay St. E., Hwy 18 & Finlay St., Killarney, MB",49.181167,-99.657551,Petro
+MELITA,MB,"Hwy. #83, Melita, MB",49.270087,-100.985454,Petro
+MIAMI,MB,"370 Norton Ave, Miami, MB",49.370264,-98.239006,Petro
+MORRIS,MB,"212 MAIN STREET (Hwy. 75), Morris, MB",49.352529,-97.363892,Petro
+NEEPAWA,MB,"Hwy. 16, 12 Main St. W., Neepawa, MB",50.22611,-99.479318,Petro
+PINE FALLS,MB,"Hwy. #11 & Hwy. #304, Pine Falls, MB",50.56041,-96.182363,Petro
+PORTAGE LA PRAIRIE,MB,"2199 Saskatchewan Ave. W., Portage La Prairie, MB",49.970956,-98.319944,Petro
+RESTON,MB,"316 4th Street, Reston, MB",49.558664,-101.094248,Petro
+RUSSELL,MB,"Jct. Hwy. 16 & 83, Russell, MB",50.773732,-101.287658,Petro
+STEINBACH,MB,"Steinbach, MB",49.53,-96.68,Petro
+TEULON,MB,"Hwy. #7, Teulon, MB",50.38434,-97.252843,Petro
+THE PAS,MB,"Hwy. #10 North, The Pas, MB",53.856148,-101.320023,Petro
+THOMPSON,MB,"98 Berens Road, Thompson, MB",55.729835,-97.862928,Petro
+VIRDEN,MB,"893 6th Ave South, Virden, MB",49.558664,-101.094248,Petro
+WINKLER,MB,"526 Centennial St., Winkler, MB",49.185497,-97.934194,Petro
+WINNIPEG-DEACONS,MB,"Deacon's Corner, Winnipeg, MB",49.89,-97.06,Petro
+WINNIPEG-MARION ST,MB,"928 Marion Street, Winnipeg, MB",49.881663,-97.080984,Petro
+BVD - MEDUCTIC WEST,NB,"224 Rte 122, Meductic, NB",45.975258,-67.471234,Petro
+GRAND FALLS,NB,"315, rue Ouellette, Grand Falls, NB",47.037462,-67.771021,Petro
+MONCTON,NB,"2600, Mountain Road, Moncton, NB",46.130731,-64.882561,Petro
+DEER LAKE,NL,"TransCanada Hwy., & Hwy. #430, Deer Lake, NL",49.187668,-57.428391,Petro
+GOOBIES,NL,"TransCanada Hwy., Goobies, NL",47.940576,-53.947388,Petro
+ST JOHN'S,NL,"986 Kenmount Road, (TransCanada Hwy.), St. John’s, NL",47.527866,-52.837372,Petro
+DARTMOUTH,NS,"50 Isnor Drive (located in, Burnside Industrial Park), Dartmouth, NS",44.706052,-63.597525,Petro
+GLENHOLME,NS,"3376 Route 104 (TransCanada Hwy.), Glenholme, NS",45.403799,-63.534939,Petro
+LITTLE BRAS D'OR,NS,"Trans Canada Hwy #1, Little Bras D’Or, NS",46.253284,-60.298156,Petro
+LW HARBOUR,NS,"20 Falls Point Road, Lower Woods Harbour, NS",43.521935,-65.734176,Petro
+WILEVILLE,NS,"Wileville, NS",44.4,-64.5,Petro
+WILMOT,NS,"Wilmot, NS",44.96,-65.0,Petro
+WINDSOR,NS,"Hwy 401 & Country Rd Exit 14, Windsor, NS",44.99,-64.13,Petro
+YARMOUTH,NS,"Yarmouth, NS",43.84,-66.11,Petro
+ENTERPRISE,NT,"2 Bear Road, Enterprise, NT",60.569681,-116.152117,Petro
+YELLOWKNIFE,NT,"324 Old Airport Road, Yellowknife, NT",62.452995,-114.402831,Petro
+BARRIE,ON,"265 Burton Avenue, Barrie, ON",44.371451,-79.67519,Petro
+BOTHWELL,ON,"15807 Longwoods Road, Bothwell, ON",42.615452,-81.844856,Petro
+BOWMANVILLE,ON,"Bowmanville, ON",43.91,-78.68,Petro
+BRADFORD (SITE 04041),ON,"436 Dissette Street, Bradford, ON",44.128202,-79.557342,Petro
+BRAMPTON-ARMBRO,ON,"45 Van Kirk Drive, Brampton, ON",43.702308,-79.799103,Petro
+BRAMPTON-INTERMODAL,ON,"2 Intermodal Road, Brampton, ON",43.731453,-79.678817,Petro
+BURLINGTON,ON,"5600 Mainway, Burlington, ON",43.400904,-79.765592,Petro
+BVD - BRAMPTON EAST,ON,"45 Van Kirk Drive, Brampton, ON",43.702308,-79.799103,Petro
+BVD - BRAMPTON WEST,ON,"45 Van Kirk Drive, Brampton, ON",43.702308,-79.799103,Petro
+BVD - COCHRANE,ON,"#54 - Hwy. 11 West, Cochrane, ON",49.06264,-81.00897,Petro
+BVD - COMBER EAST,ON,"7018 Industrial Drive, Comber, ON",42.2383,-82.550824,Petro
+BVD - COMBER WEST,ON,"7018 Industrial Drive, Comber, ON",42.2383,-82.550824,Petro
+BVD - CORNWALL EAST,ON,"6215 Boundary Road, Cornwall, ON",45.060601,-74.686187,Petro
+BVD - CORNWALL WEST,ON,"6215 Boundary Road, Cornwall, ON",45.060601,-74.686187,Petro
+BVD - MILTON WEST,ON,"615 Steeles Avenue East, Milton, ON",43.5301,-79.885046,Petro
+BVD - MISSISSAUGA EAST,ON,"6125 Ordan Drive, Mississauga, ON",43.656321,-79.65147,Petro
+BVD - MISSISSAUGA WEST,ON,"6125 Ordan Drive, Mississauga, ON",43.656321,-79.65147,Petro
+BVD - NIAGARA-ON-THE-LAKE,ON,"495 York Road, Niagara-On-The-Lake, ON",43.160273,-79.163926,Petro
+BVD - NIPIGON WEST,ON,"536 ON-17, Nipigon, ON",49.021941,-88.289379,Petro
+BVD - NORTH BAY WEST,ON,"3060 Hwy 11 N, North Bay, ON",46.356173,-79.468092,Petro
+BVD - SARNIA WEST,ON,"1741 London Line, Sarnia, ON",42.983473,-82.326621,Petro
+BVD - SAULT STE MARIE,ON,"937 Great Northern Road, Sault Ste. Marie, ON",46.554278,-84.319793,Petro
+CHATHAM,ON,"737 Richmond Street, Chatham, ON",42.38517,-82.20956,Petro
+CLARKSON,ON,"555 Southdown Road, Mississauga, ON",43.503554,-79.619406,Petro
+COLLINGWOOD,ON,"387 Raglan Street South, Collingwood, ON",44.491161,-80.194528,Petro
+CONCORD,ON,"120 MacIntosh Blvd., Vaughan, ON",43.804321,-79.520127,Petro
+COOKSTOWN,ON,"Cookstown, ON",44.19,-79.7,Petro
+DORCHESTER WEST,ON,"3305 Dorchester Road, Dorchester, ON",42.95611,-81.061756,Petro
+DRYDEN,ON,"140 Colonization Avenue N., Dryden, ON",49.788919,-92.825589,Petro
+DUNNVILLE,ON,"Dunnville, ON",42.88,-79.62,Petro
+EXETER,ON,"315 Main Street North, Exeter, ON",43.366849,-81.485049,Petro
+FERGUS,ON,"584 Glengarry Cresent, Fergus, ON",43.71908,-80.37742,Petro
+FLAMBOROUGH,ON,"590 Hwy 5 West, Flamborough, ON",43.295637,-79.982829,Petro
+FORT ERIE,ON,"1200 Gilmore, Fort Erie, ON",42.919738,-78.959561,Petro
+GLENCOE,ON,"Glencoe, ON",42.74,-81.71,Petro
+GUELPH,ON,"504 Imperial Road, Guelph, ON",43.53918,-80.29979,Petro
+HAGERSVILLE,ON,"2993 Concession, 12 Walpole, Hagersville, ON",42.954105,-80.0716,Petro
+HAMILTON-KENORA AVE,ON,"349 Kenora Avenue, Hamilton, ON",43.240623,-79.764819,Petro
+HAMILTON-PARKDALE,ON,"740 Parkdale Ave North, Hamilton, ON",43.257651,-79.782876,Petro
+HORNBY,ON,"7443 Trafalgar Road, Hornby, ON",43.566431,-79.822379,Petro
+HUNTSVILLE,ON,"86 Hanes Road, Huntsville, ON",45.336295,-79.231781,Petro
+IGNACE,ON,"Hwy 17 West, Ignace, ON",49.417869,-91.670158,Petro
+KAMINISTIQUIA,ON,"Hwy. 11/17 & Hwy. 102, Kaministiquia, ON",48.533843,-89.650036,Petro
+KENORA,ON,"1775 Veterans Drive, Kenora, ON",49.797008,-94.487765,Petro
+KINGSTON-CENTENNIAL WEST,ON,"1586 Centennial Drive, Kingston, ON",44.280251,-76.569986,Petro
+KITCHENER,ON,"Hwy 401 & Homer Watson Blvd., Interchange #275, North to 120 Conestoga College Blvd., Kitchener, ON",43.385386,-80.413168,Petro
+LANGTON,ON,"Langton, ON",42.68,-80.55,Petro
+LISTOWEL,ON,"5645 Line 86, RR 3 Listowel, Listowel, ON",43.724964,-80.937524,Petro
+LONDON-CLARKE ROAD,ON,"660 Clarke Rd., London, ON",43.018111,-81.182125,Petro
+LONDON-WILTON GROVE,ON,"825 Wilton Grove Road, London, ON",42.925163,-81.207676,Petro
+MILTON,ON,"615 Steeles Avenue East, Milton, ON",43.5301,-79.885046,Petro
+MISSISSAUGA-ATLANTIC,ON,"6086 Atlantic Drive, Mississauga, ON",43.660751,-79.645965,Petro
+MISSISSAUGA-DIXIE&DREW,ON,"Dixie Road & Drew Road, Mississauga, ON",43.6205,-79.5654,Petro
+MOUNT FOREST,ON,"6892 Hwy 89, Mount Forest, ON",43.976692,-80.755321,Petro
+NEW LISKEARD,ON,"Hwy. #11, New Liskeard, ON",47.535356,-79.674718,Petro
+NEWMARKET,ON,"1172 Twinney Drive, Newmarket, ON",44.064122,-79.428513,Petro
+NIAGARA FALLS,ON,"5795 Thorold Stone Road, Niagara Falls, ON",43.115551,-79.091276,Petro
+NORTH BAY-HWY 11,ON,"3060 Hwy 11 N, North Bay, ON",46.356173,-79.468092,Petro
+NORTH YORK-STEELES,ON,"Steeles Avenue, North York, ON",43.78,-79.42,Petro
+NORWICH,ON,"Norwich, ON",42.99,-80.6,Petro
+ORANGEVILLE,ON,"490 Richardson Rd., Orangeville, ON",43.898839,-80.114445,Petro
+ORILLIA PETRO PASS,ON,"Orillia, ON",44.61,-79.42,Petro
+ORONO,ON,"8262 Hwy. #115, Orono, ON",44.036308,-78.614404,Petro
+OSHAWA,ON,"190 Wentworth St. E., Oshawa, ON",43.876437,-78.838953,Petro
+OTTAWA-GLOUCESTER,ON,"1400 Windmill Lane, Ottawa, ON",45.412293,-75.612534,Petro
+OTTAWA-NEPEAN,ON,"1985 Merivale Road, Ottawa, ON",45.32635,-75.718986,Petro
+OWEN SOUND,ON,"R.R.#5 Owen Sound Hwy 6/21, Owen Sound, ON",44.560646,-80.969818,Petro
+PETERBOROUGH  (22718),ON,"660 The Queensway, Peterborough, ON",44.277681,-78.337291,Petro
+PICKERING,ON,"1750 Alliance Road, Pickering, ON",43.83373,-79.076747,Petro
+RED LAKE,ON,"84 Hammell Road, Red Lake, ON",51.015457,-93.828148,Petro
+REXDALE,ON,"1741 Albion Road, Rexdale, ON",43.74367,-79.603999,Petro
+SARNIA,ON,"1741 London Line, Sarnia, ON",42.983473,-82.326621,Petro
+SIMCOE,ON,"Simcoe, ON",42.86,-80.49,Petro
+SIOUX LOOKOUT,ON,"Hwy #664, Front Street East, Sioux Lookout, ON",50.057304,-91.977389,Petro
+ST ISIDORE,ON,"5715 St Catherine Street, St Isidore, ON",45.34723,-74.89979,Petro
+ST-THOMAS PETRO-PASS,ON,"St. Thomas, ON",42.78,-81.2,Petro
+ST. CATHARINES,ON,"St. Catharines, ON",43.18,-79.24,Petro
+STAYNER,ON,"203 Ontario Street, Stayner, ON",44.419774,-80.085817,Petro
+SUDBURY-BARRYDOWNE,ON,"3070 Regent Street, Sudbury, ON",46.436134,-80.974222,Petro
+SUDBURY-REGENT,ON,"3070 Regent Street, Sudbury, ON",46.436134,-80.974222,Petro
+SUMMERSTOWN,ON,"6350 County Road 27, Summerstown, ON",45.088017,-74.590232,Petro
+THUNDER BAY,ON,"720 Hewitson Street, Thunder Bay, ON",48.404691,-89.256014,Petro
+TIMMINS-MONETA,ON,"364 Moneta Ave, Timmins, ON",48.466137,-81.325015,Petro
+TORONTO-NORTH QUEEN,ON,"58 North Queen Street, Toronto, ON",43.623064,-79.539165,Petro
+VAUGHAN,ON,"120 MacIntosh Blvd., Vaughan, ON",43.804321,-79.520127,Petro
+WATERLOO,ON,"155 Roger Street, Waterloo, ON",43.462491,-80.505615,Petro
+WELLAND,ON,"286 Lincoln Street, Welland, ON",42.984371,-79.241611,Petro
+WINDSOR-COUNTY RD 46,ON,"County Road 46, Windsor, ON",42.3,-82.95,Petro
+WINGHAM  22716,ON,"50 North Street West, Wingham, ON",43.897537,-81.306531,Petro
+WOODSTOCK,ON,"8 Churchill Place, Woodstock, ON",43.134183,-80.727558,Petro
+AMOS,QC,"112 Route 109 Sud, Amos, QC",48.563928,-78.130903,Petro
+BAIE COMEAU,QC,"250 Route 138, Baie Comeau, QC",49.176826,-68.338319,Petro
+CHAMBORD,QC,"15 Route 155, Chambord, QC",48.431966,-72.080376,Petro
+CHIBOUGAMAU,QC,"1253 Route 167 Sud, Chibougamau, QC",49.81841,-74.4314,Petro
+CHICOUTIMI,QC,"2231 Talbot Blvd., Chicoutimi, QC",48.387291,-71.076586,Petro
+GATINEAU,QC,"Gatineau, QC",45.48,-75.7,Petro
+GRANBY,QC,"619 rue Laurent, Granby, QC",45.39238,-72.754125,Petro
+L'ASSOMPTION,QC,"190 Montee St-Sulpice,, Route 343, L’Assomption, QC",45.824856,-73.396965,Petro
+LACHINE,QC,"10700 Cote de Liesse Blvd., Lachine, QC",45.46227,-73.721966,Petro
+LAVAL,QC,"1149 Blvd. St. Elzear West, Laval, QC",45.589732,-73.742428,Petro
+MATAGAMI,QC,"3125 Industrial Blvd., Matagami, QC",49.755985,-77.657161,Petro
+MONT JOLI,QC,"1050 rue d’Anjou, Mont-Joli, QC",48.595244,-68.205432,Petro
+MONT-LAURIER,QC,"2540 chemin de la Lièvre Sud, Mont-Laurier, QC",46.547563,-75.515062,Petro
+NAPIERVILLE,QC,"Junction #15 & #219 (Autoroute 15, Exit 21), 801 Rang du Coteau, Napierville, QC",45.196275,-73.448861,Petro
+ROUYN-NORANDA,QC,"630, boul. Rideau, Rouyn-Noranda, QC",48.248912,-79.059999,Petro
+SHERBROOKE,QC,"4985, boul. Industriel, Sherbrooke, QC",45.395516,-71.991262,Petro
+ST JEAN-PORT JOLI,QC,"Autoroute 20, Exit 414, St-Jean-Port-Joli, QC",47.193753,-70.239471,Petro
+ST LAURENT,QC,"St-Laurent, QC",45.51,-73.66,Petro
+ST NICOLAS,QC,"1230, Chemin des Oliviers, St. Nicolas, QC",46.678899,-71.346282,Petro
+STE EULALIE,QC,"334, des Bouleaux, Ste. Eulalie, QC",46.104021,-72.237264,Petro
+STE FOY,QC,"2390 Watt Street, Autoroute 440, Exit 15, Ste. Foy, QC",46.791165,-71.29487,Petro
+STE JULIE,QC,"2050 Léonard de Vinci, Autoroute 20, Exit 102, Ste. Julie, QC",45.576505,-73.333987,Petro
+TROIS RIVIERES,QC,"Trois-Rivières, QC",46.35,-72.55,Petro
+VAL D'OR-EAST,QC,"2401 Jean-Jacques, Cossette Blvd at Hwy. #117, Val D’or, QC",48.113907,-77.782323,Petro
+VANIER,QC,"500 Marais Street, Autoroute 40, Exit 312, Vanier, QC",46.827851,-71.283739,Petro
+VILLE D'ANJOU,QC,"8100, boul. du Golf, Anjou, QC",45.620112,-73.554953,Petro
+ALIDA,SK,"Alida, SK",49.38,-101.55,Petro
+ASSINIBOIA,SK,"420 1st Ave W, Assiniboia, SK",49.634819,-105.999591,Petro
+BIGGAR,SK,"901 1st Ave. West & Hwy # 4, Biggar, SK",52.058171,-107.999951,Petro
+BVD - GRENFELL WEST,SK,"1502 Wolseley Avenue, Grenfell, SK",50.413391,-102.925993,Petro
+CARLYLE,SK,"Hwy. #9 South, Carlyle, SK",49.627531,-102.255721,Petro
+CARNDUFF,SK,"1211 Hwy 18, Carnduff, SK",49.176453,-101.795032,Petro
+CARROT RIVER,SK,"145 - 1st St. W., Carrot River, SK",53.279633,-103.588157,Petro
+CHAPLIN,SK,"North of #1 Hwy on Hwy 19, Chaplin, SK",50.461841,-106.645907,Petro
+CORMAN PARK,SK,"Corman Park, SK",52.15,-106.67,Petro
+EDAM,SK,"Highway 26 and 674, Edam, SK",53.191385,-108.766944,Petro
+ESTEVAN - 4TH ST,SK,"4th Street, Estevan, SK",49.14,-102.99,Petro
+ESTEVAN - CARBON,SK,"102 Carbon Crescent, Estevan, SK",49.146289,-102.927346,Petro
+GRAVELBOURG,SK,"201 - 6th Avenue East, Gravelbourg, SK",49.878182,-106.554578,Petro
+GRENFELL,SK,"1502 Wolseley Avenue, Grenfell, SK",50.413391,-102.925993,Petro
+HUMBOLDT,SK,"1005 - 5th Avenue, Humboldt, SK",52.198056,-105.125567,Petro
+KINDERSLEY,SK,"Hwy. #7 & Main Street, Kindersley, SK",51.474517,-109.162476,Petro
+KIPLING,SK,"802 Railway St., Kipling, SK",50.104279,-102.638,Petro
+LAMPMAN,SK,"101 Minard Road, Lampman, SK",49.378758,-102.768731,Petro
+LARONGE,SK,"Hwy #2 South, La Ronge, SK",55.087164,-105.319651,Petro
+MAIDSTONE,SK,"Hwy. #21 & Hwy. #16, Maidstone, SK",53.104397,-109.296276,Petro
+MANKOTA,SK,"100 Railway Avenue, Mankota, SK",49.420752,-107.076933,Petro
+MAPLE CREEK,SK,"1 Pacific Ave. and Hwy 21, Maple Creek, SK",49.910989,-109.485514,Petro
+MEADOW LAKE,SK,"306 9th Street, Meadow Lake, SK",54.135348,-108.452461,Petro
+MELFORT,SK,"795 Saskatchewan Avenue East, Melfort, SK",52.856616,-104.593642,Petro
+MOOSE JAW,SK,"TransCanada Hwy. West, Moose Jaw, SK",50.426446,-105.547371,Petro
+NORTH BATTLEFORD,SK,"1007 Battleford Road, North Battleford, SK",52.762804,-108.284249,Petro
+NORTH BATTLEFORD BYPASS,SK,"1007 Battleford Road, North Battleford, SK",52.762804,-108.284249,Petro
+OXBOW,SK,"216 Mona Street, Oxbow, SK",49.233755,-102.18122,Petro
+PRINCE ALBERT,SK,"655 - 13th St. East, Prince Albert, SK",53.20092,-105.73689,Petro
+RADVILLE,SK,"626 Railway Avenue, Radville, SK",49.46251,-104.296456,Petro
+REDVERS,SK,"Hwy. #8 & Hwy. #13, Redvers, SK",49.576861,-101.691478,Petro
+REGINA,SK,"529 - 1st Ave. E., Regina, SK",50.46734,-104.573981,Petro
+ROSETOWN,SK,"205 Highway #4 North, Rosetown, SK",51.593495,-107.996635,Petro
+SASKATOON-51ST ST,SK,"402 - 51st Street East, Saskatoon, SK",52.173661,-106.664302,Petro
+SASKATOON-MELVILLE,SK,"Melville Street, Saskatoon, SK",52.12,-106.67,Petro
+SHAUNAVON,SK,"711 - 3rd Avenue West, Shaunavon, SK",49.644443,-108.416004,Petro
+ST ST,SK,"402 - 51st Street East, Saskatoon, SK",52.173661,-106.664302,Petro
+STOUGHTON,SK,"Hwy 13 & 47, Stoughton, SK",49.668269,-103.022542,Petro
+SWIFT CURRENT,SK,"2004 South Service Road West, Swift Current, SK",50.286378,-107.83213,Petro
+TISDALE,SK,"Highway 3 E., Tisdale, SK",52.842269,-104.034822,Petro
+UNITY,SK,"175 - 2nd Ave. S., Unity, SK",52.437716,-109.164166,Petro
+WADENA,SK,"Hwy 35 South, Wadena, SK",51.944507,-103.80147,Petro
+WEYBURN,SK,"10 Hill Avenue, Weyburn, SK",49.663362,-103.859406,Petro
+YORKTON-HWY 16,SK,"Corner of Hwy. #9 & #16, (South side of Yorkton), Yorkton, SK",51.19485,-102.448727,Petro
+WATSON LAKE,YT,"Mile 635, Alaska Hwy., Watson Lake, YT",60.052532,-128.66569,Petro
+WHITEHORSE-ALASKA HWY,YT,"Alaska Hwy. (Mile 910, Km 1463), Whitehorse, YT",60.638075,-135.001529,Petro
+WHITEHORSE-GALENA RD,YT,"110 Galena Road, Whitehorse, YT",60.741498,-135.073256,Petro
