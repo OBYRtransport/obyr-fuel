@@ -41,7 +41,9 @@ if not st.session_state.logged_in:
             st.error("❌ Wrong credentials")
     st.stop()
 
-# ====================== HELPERS ======================
+# ====================== MAIN APP ======================
+st.success(f"✅ Logged in as **{st.session_state.driver_name}**")
+
 def clean_price(series):
     s = series.astype(str).str.replace(r'[^0-9.\-]', '', regex=True).replace('', np.nan)
     s = pd.to_numeric(s, errors='coerce')
@@ -105,7 +107,7 @@ if current_address:
 
 dest_lat, dest_lon = geocode(dest_address) or (43.69823, -79.58937)
 
-# Load latest (newest date in filename)
+# Load latest (strict date sorting)
 def load_latest(pattern):
     files = glob.glob(os.path.join(PRICES_DIR, pattern))
     if not files:
@@ -123,7 +125,7 @@ esso_path = load_latest("esso_prices_*.csv")
 if petro_path: st.success(f"✅ Loaded Petro: {os.path.basename(petro_path)}")
 if esso_path: st.success(f"✅ Loaded Esso: {os.path.basename(esso_path)}")
 
-# ====================== LOAD + MATCH ======================
+# ====================== LOAD + MATCH (dynamic + safe) ======================
 petro_df = pd.DataFrame()
 if petro_path:
     df = pd.read_csv(petro_path)
@@ -149,26 +151,19 @@ esso_df = pd.DataFrame()
 if esso_path:
     esso_prices = pd.read_csv(esso_path)
     esso_prices.columns = [c.strip() for c in esso_prices.columns]
-
     price_col = next((col for col in esso_prices.columns if any(x in col.lower() for x in ["fuel", "price"])), None)
     site_col = next((col for col in esso_prices.columns if "site" in col.lower()), None)
     province_col = next((col for col in esso_prices.columns if "prov" in col.lower()), None)
-
     if price_col: esso_prices = esso_prices.rename(columns={price_col: "Price"})
     if site_col: esso_prices = esso_prices.rename(columns={site_col: "SITE NUMBER"})
     if province_col: esso_prices = esso_prices.rename(columns={province_col: "Province"})
-
     esso_prices = esso_prices.dropna(subset=["Price"]).reset_index(drop=True)
     esso_prices["Price"] = clean_price(esso_prices["Price"])
     esso_prices["Province"] = esso_prices["Province"].astype(str).str.strip().str.upper()
-
-    # Fallback: if merge fails, keep original Station_Name
     esso_df = esso_prices.merge(
         master_esso[["SITE NUMBER", "Station_Name", "Address", "Latitude", "Longitude"]],
         on="SITE NUMBER", how="left"
     )
-    if esso_df["Station_Name"].isna().all():
-        esso_df["Station_Name"] = esso_prices.get("Station_Name", esso_prices.get("City", "Unknown"))
     esso_df["Network"] = "Esso"
 
 # Combine
