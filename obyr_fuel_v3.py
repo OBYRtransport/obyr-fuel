@@ -107,7 +107,7 @@ if current_address:
 
 dest_lat, dest_lon = geocode(dest_address) or (43.69823, -79.58937)
 
-# Load latest (date in filename)
+# Load latest (strict date in filename)
 def load_latest(pattern):
     files = glob.glob(os.path.join(PRICES_DIR, pattern))
     if not files:
@@ -160,7 +160,7 @@ if esso_path:
     df = df.dropna(subset=["Price"]).reset_index(drop=True)
     df["Price"] = clean_price(df["Price"])
     df["Province"] = df["Province"].astype(str).str.strip().str.upper()
-    # New strategy: SITE NUMBER is the reliable key
+    # New matching strategy for Esso (SITE NUMBER is the reliable key)
     esso_df = df.merge(
         master_esso[["SITE NUMBER", "Station_Name", "Address", "Latitude", "Longitude"]],
         on="SITE NUMBER", how="left"
@@ -222,4 +222,5 @@ col1, col2 = st.columns(2)
 with col1: st.metric("Cheapest for YOU", f"${prices_df['All_In_Price'].iloc[0]:.3f}" if len(prices_df)>0 else "—")
 with col2: st.metric("Your best savings", f"${prices_df['Savings_per_1000L'].iloc[0]:,.0f}" if len(prices_df)>0 else "—")
 
-st.download_button("📥 Download this list", prices
+st.download_button("📥 Download this list", prices_df.to_csv(index=False), f"obyr_fuel_v4_{datetime.now().strftime('%Y-%m-%d')}.csv")
+st.caption(f"© {datetime.now().year} OBYR Transport Inc. • OBYR Fuel V5.0")
