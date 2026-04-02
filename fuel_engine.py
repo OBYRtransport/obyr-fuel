@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import csv
+import io
 import re
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseDownload
 
 PROV_TAX: Dict[str, float] = {
     "NL": 0.15,
@@ -24,6 +28,14 @@ PROV_TAX: Dict[str, float] = {
 
 DEFAULT_YARD = {"lat": 43.69823, "lon": -79.58937, "label": "Mississauga Yard"}
 
+DRIVE_FOLDER_ID = "18Cqpj-pVLDk5Esx2r3Cj_IR6Bd7lubCT"
+SERVICE_ACCOUNT_FILENAME = "gdrive_key.json"
+
+LAST_FILE_INFO = {
+    "petro": {"name": "", "source": "", "status": ""},
+    "esso": {"name": "", "source": "", "status": ""},
+}
+
 
 def get_base_dir() -> Path:
     return Path(__file__).resolve().parent
@@ -38,27 +50,123 @@ def resolve_path(*candidates: str) -> Path:
     raise FileNotFoundError(f"Could not find any of: {candidates}")
 
 
-def load_latest(pattern: str, prices_dir: Optional[Path] = None) -> Optional[Path]:
+def get_service_account_path() -> Path:
+    return get_base_dir() / SERVICE_ACCOUNT_FILENAME
+
+
+def get_drive_service():
+    key_path = get_service_account_path()
+    if not key_path.exists():
+        raise FileNotFoundError(f"Missing Google Drive key file: {key_path}")
+
+    creds = service_account.Credentials.from_service_account_file(
+        str(key_path),
+        scopes=["https://www.googleapis.com/auth/drive.readonly"],
+    )
+    return build("drive", "v3", credentials=creds, cache_discovery=False)
+
+
+def glob_to_regex(pattern: str) -> str:
+    escaped = re.escape(pattern).replace(r"\*", ".*")
+    return f"^{escaped}$"
+
+
+def list_drive_candidates(pattern: str) -> List[dict]:
+    service = get_drive_service()
+    results = service.files().list(
+        q=f"'{DRIVE_FOLDER_ID}' in parents and trashed = false",
+        fields="files(id, name, modifiedTime)",
+        orderBy="modifiedTime desc",
+        pageSize=200,
+    ).execute()
+
+    files = results.get("files", [])
+    regex = re.compile(glob_to_regex(pattern), re.IGNORECASE)
+    candidates = [f for f in files if regex.match(f["name"])]
+
+    def sort_key(item: dict):
+        m = re.search(r"(\d{4}-\d{2}-\d{2})", item["name"])
+        return (m.group(1) if m else "", item.get("modifiedTime", ""))
+
+    candidates.sort(key=sort_key, reverse=True)
+    return candidates
+
+
+def download_drive_file(file_id: str, filename: str) -> io.BytesIO:
+    service = get_drive_service()
+    request = service.files().get_media(fileId=file_id)
+    fh = io.BytesIO()
+    downloader = MediaIoBaseDownload(fh, request)
+
+    done = False
+    while not done:
+        _, done = downloader.next_chunk()
+
+    fh.seek(0)
+    fh.name = filename
+    return fh
+
+
+def list_local_candidates(pattern: str, prices_dir: Optional[Path] = None) -> List[Path]:
     prices_dir = prices_dir or resolve_path("Prices")
     files = sorted(prices_dir.glob(pattern))
-    if not files:
-        return None
 
     def sort_key(p: Path) -> Tuple[str, float]:
-        match = re.search(r"(\d{4}-\d{2}-\d{2})", p.name)
-        return (match.group(1) if match else "", p.stat().st_mtime)
+        m = re.search(r"(\d{4}-\d{2}-\d{2})", p.name)
+        return (m.group(1) if m else "", p.stat().st_mtime)
 
-    return max(files, key=sort_key)
+    return sorted(files, key=sort_key, reverse=True)
 
 
-def safe_read_csv(path: Path, **kwargs) -> pd.DataFrame:
+def get_candidate_files(pattern: str, prices_dir: Optional[Path] = None) -> List[dict]:
+    candidates: List[dict] = []
+
     try:
-        return pd.read_csv(path, **kwargs)
+        for item in list_drive_candidates(pattern):
+            candidates.append(
+                {
+                    "source": "google_drive",
+                    "name": item["name"],
+                    "id": item["id"],
+                    "modifiedTime": item.get("modifiedTime", ""),
+                }
+            )
+    except Exception:
+        pass
+
+    try:
+        for path in list_local_candidates(pattern, prices_dir=prices_dir):
+            candidates.append(
+                {
+                    "source": "local",
+                    "name": path.name,
+                    "path": path,
+                }
+            )
+    except Exception:
+        pass
+
+    return candidates
+
+
+def open_candidate(candidate: dict):
+    if candidate["source"] == "google_drive":
+        return download_drive_file(candidate["id"], candidate["name"])
+    return candidate["path"]
+
+
+def safe_read_csv(path_or_buffer, **kwargs) -> pd.DataFrame:
+    try:
+        return pd.read_csv(path_or_buffer, **kwargs)
     except pd.errors.ParserError:
         fallback_kwargs = dict(kwargs)
         fallback_kwargs.pop("engine", None)
         fallback_kwargs.pop("on_bad_lines", None)
-        return pd.read_csv(path, engine="python", on_bad_lines="skip", **fallback_kwargs)
+
+        if hasattr(path_or_buffer, "seek"):
+            path_or_buffer.seek(0)
+
+        return pd.read_csv(path_or_buffer, engine="python", on_bad_lines="skip", **fallback_kwargs)
 
 
 def clean_price(series: pd.Series) -> pd.Series:
@@ -136,6 +244,7 @@ def read_petro_master() -> pd.DataFrame:
 def read_esso_master() -> pd.DataFrame:
     path = resolve_path("Locations/esso_cardlock_master.csv", "esso_cardlock_master.csv")
     rows: List[List[str]] = []
+
     with open(path, newline="", encoding="utf-8", errors="replace") as handle:
         reader = csv.reader(handle)
         header = next(reader)
@@ -154,16 +263,12 @@ def read_esso_master() -> pd.DataFrame:
 
     if "SITE NUMBER" not in df.columns:
         df["SITE NUMBER"] = ""
-
     if "Province" not in df.columns:
         df["Province"] = ""
-
     if "Latitude" not in df.columns:
         df["Latitude"] = np.nan
-
     if "Longitude" not in df.columns:
         df["Longitude"] = np.nan
-
     if "Station_Name" not in df.columns:
         df["Station_Name"] = ""
 
@@ -185,21 +290,8 @@ def read_driver_master() -> Optional[pd.DataFrame]:
     return df
 
 
-def load_petro_prices(path: Optional[Path] = None) -> pd.DataFrame:
-    """
-    Parse Petro report-style exports robustly.
-
-    Handles:
-    1) normal rows: STATION,PR,1.2345,...
-    2) malformed rows where province is embedded in station field
-    3) rows where province is missing entirely but station + price still exist
-    """
-    if path is None:
-        path = load_latest("petro_prices_*.csv")
-    if path is None:
-        return pd.DataFrame()
-
-    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+def _parse_petro_from_content(content: str) -> pd.DataFrame:
+    lines = content.splitlines()
 
     records = []
     started = False
@@ -303,13 +395,47 @@ def load_petro_prices(path: Optional[Path] = None) -> pd.DataFrame:
     return df.reset_index(drop=True)
 
 
-def load_esso_prices(path: Optional[Path] = None) -> pd.DataFrame:
-    if path is None:
-        path = load_latest("esso_prices_*.csv")
-    if path is None:
-        return pd.DataFrame()
+def load_petro_prices(path: Optional[Path] = None) -> pd.DataFrame:
+    if path is not None:
+        if hasattr(path, "read"):
+            path.seek(0)
+            content = path.read().decode("utf-8", errors="replace")
+        else:
+            content = path.read_text(encoding="utf-8", errors="replace")
+        return _parse_petro_from_content(content)
 
-    df = safe_read_csv(path)
+    candidates = get_candidate_files("petro_prices_*.csv")
+
+    for candidate in candidates:
+        try:
+            obj = open_candidate(candidate)
+            if hasattr(obj, "seek"):
+                obj.seek(0)
+                content = obj.read().decode("utf-8", errors="replace")
+            else:
+                content = obj.read_text(encoding="utf-8", errors="replace")
+
+            df = _parse_petro_from_content(content)
+
+            if not df.empty and len(df) >= 20:
+                LAST_FILE_INFO["petro"] = {
+                    "name": candidate["name"],
+                    "source": candidate["source"],
+                    "status": "ok",
+                }
+                return df
+        except Exception:
+            continue
+
+    LAST_FILE_INFO["petro"] = {"name": "", "source": "", "status": "failed"}
+    return pd.DataFrame()
+
+
+def _parse_esso_from_obj(path_or_buffer) -> pd.DataFrame:
+    if hasattr(path_or_buffer, "seek"):
+        path_or_buffer.seek(0)
+
+    df = safe_read_csv(path_or_buffer)
     df.columns = [c.strip() for c in df.columns]
 
     rename_map = {}
@@ -341,6 +467,31 @@ def load_esso_prices(path: Optional[Path] = None) -> pd.DataFrame:
     df = df.dropna(subset=["Price"]).copy()
 
     return df.reset_index(drop=True)
+
+
+def load_esso_prices(path: Optional[Path] = None) -> pd.DataFrame:
+    if path is not None:
+        return _parse_esso_from_obj(path)
+
+    candidates = get_candidate_files("esso_prices_*.csv")
+
+    for candidate in candidates:
+        try:
+            obj = open_candidate(candidate)
+            df = _parse_esso_from_obj(obj)
+
+            if not df.empty and len(df) >= 20:
+                LAST_FILE_INFO["esso"] = {
+                    "name": candidate["name"],
+                    "source": candidate["source"],
+                    "status": "ok",
+                }
+                return df
+        except Exception:
+            continue
+
+    LAST_FILE_INFO["esso"] = {"name": "", "source": "", "status": "failed"}
+    return pd.DataFrame()
 
 
 def match_petro(petro_prices: pd.DataFrame, master_petro: pd.DataFrame) -> Tuple[pd.DataFrame, Dict[str, int]]:
@@ -512,13 +663,12 @@ def build_price_table(
     else:
         prices_df = pd.concat([petro_df, esso_df], ignore_index=True)
 
-    latest_petro = load_latest("petro_prices_*.csv")
-    latest_esso = load_latest("esso_prices_*.csv")
-
     if prices_df.empty:
         meta = {
-            "latest_petro_file": latest_petro.name if latest_petro else "",
-            "latest_esso_file": latest_esso.name if latest_esso else "",
+            "latest_petro_file": LAST_FILE_INFO["petro"]["name"],
+            "latest_esso_file": LAST_FILE_INFO["esso"]["name"],
+            "petro_source": LAST_FILE_INFO["petro"]["source"],
+            "esso_source": LAST_FILE_INFO["esso"]["source"],
             "petro_stats": petro_stats,
             "esso_stats": esso_stats,
             "petro_source_rows": len(petro_prices),
@@ -556,15 +706,19 @@ def build_price_table(
     )
 
     prices_df = prices_df[
-        (prices_df["Miles_from_Current"] <= float(max_miles)) | prices_df["Latitude"].isna()
+        prices_df["Latitude"].notna() &
+        prices_df["Longitude"].notna() &
+        (prices_df["Miles_from_Current"] <= float(max_miles))
     ].copy()
 
     prices_df["Savings_per_1000L"] = np.round((avg_all_in - prices_df["All_In_Price"]) * 1000, 0)
     prices_df = prices_df.sort_values(["All_In_Price", "Miles_from_Current", "Station_Name"]).reset_index(drop=True)
 
     meta = {
-        "latest_petro_file": latest_petro.name if latest_petro else "",
-        "latest_esso_file": latest_esso.name if latest_esso else "",
+        "latest_petro_file": LAST_FILE_INFO["petro"]["name"],
+        "latest_esso_file": LAST_FILE_INFO["esso"]["name"],
+        "petro_source": LAST_FILE_INFO["petro"]["source"],
+        "esso_source": LAST_FILE_INFO["esso"]["source"],
         "petro_stats": petro_stats,
         "esso_stats": esso_stats,
         "petro_source_rows": len(petro_prices),
