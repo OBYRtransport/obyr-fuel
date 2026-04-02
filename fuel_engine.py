@@ -6,7 +6,7 @@ import os
 import json
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict
 
 import numpy as np
 import pandas as pd
@@ -15,8 +15,6 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 
 print("🔥 USING GOOGLE DRIVE VERSION OF FUEL ENGINE")
-
-# ---------------- CONFIG ---------------- #
 
 DRIVE_FOLDER_ID = "18Cqpj-pVLDk5Esx2r3Cj_IR6Bd7lubCT"
 
@@ -33,6 +31,19 @@ PROV_TAX = {
     "AB": 0.05,
     "BC": 0.12,
 }
+
+# ---------------- REQUIRED FUNCTIONS (FIX) ---------------- #
+
+def get_base_dir():
+    return Path(__file__).resolve().parent
+
+
+def read_driver_master():
+    try:
+        path = get_base_dir() / "Locations" / "driver_master.csv"
+        return pd.read_csv(path)
+    except:
+        return None
 
 # ---------------- GOOGLE DRIVE ---------------- #
 
@@ -77,12 +88,10 @@ def download_drive_file(file_id):
     fh.seek(0)
     return fh
 
-
 # ---------------- FILE LOADING ---------------- #
 
 def load_latest_from_drive(prefix):
     files = list_drive_files()
-
     matching = [f for f in files if f["name"].startswith(prefix)]
 
     for file in matching:
@@ -96,28 +105,23 @@ def load_latest_from_drive(prefix):
 
 
 def load_latest_local(prefix):
-    base = Path(__file__).parent / "Prices"
-
+    base = get_base_dir() / "Prices"
     files = sorted(base.glob(f"{prefix}*.csv"), key=lambda p: p.stat().st_mtime, reverse=True)
 
     for f in files:
-        try:
-            return f, f.name, "local"
-        except:
-            continue
+        return f, f.name, "local"
 
     return None, None, None
 
-
 # ---------------- HELPERS ---------------- #
 
-def safe_read_csv(path_or_buffer):
+def safe_read_csv(obj):
     try:
-        return pd.read_csv(path_or_buffer)
+        return pd.read_csv(obj)
     except:
-        if hasattr(path_or_buffer, "seek"):
-            path_or_buffer.seek(0)
-        return pd.read_csv(path_or_buffer, engine="python", on_bad_lines="skip")
+        if hasattr(obj, "seek"):
+            obj.seek(0)
+        return pd.read_csv(obj, engine="python", on_bad_lines="skip")
 
 
 def clean_price(series):
@@ -126,7 +130,6 @@ def clean_price(series):
         .str.replace(r"[^0-9.]", "", regex=True)
         .replace("", np.nan)
         .astype(float)
-        .round(3)
     )
 
 
@@ -143,11 +146,9 @@ def haversine(lat1, lon1, lat2, lon2):
 
     return R * c
 
-
 # ---------------- LOADERS ---------------- #
 
 def load_petro_prices():
-    # try google drive
     obj, name, source = load_latest_from_drive("petro_prices_")
 
     if obj:
@@ -155,8 +156,8 @@ def load_petro_prices():
         df["Price"] = clean_price(df["Price"])
         return df, name, source
 
-    # fallback local
     obj, name, source = load_latest_local("petro_prices_")
+
     if obj:
         df = safe_read_csv(obj)
         df["Price"] = clean_price(df["Price"])
@@ -182,18 +183,17 @@ def load_esso_prices():
 
     return pd.DataFrame(), None, None
 
-
-# ---------------- MAIN ENGINE ---------------- #
+# ---------------- MAIN ---------------- #
 
 def build_price_table(current_lat, current_lon, max_miles=1000):
 
     petro_df, petro_file, petro_source = load_petro_prices()
     esso_df, esso_file, esso_source = load_esso_prices()
 
-    if petro_df.empty and esso_df.empty:
-        return pd.DataFrame(), {}
-
     df = pd.concat([petro_df, esso_df], ignore_index=True)
+
+    if df.empty:
+        return df, {}
 
     df["All_In_Price"] = df["Price"] * (1 + df["Province"].map(PROV_TAX).fillna(0.13))
 
@@ -217,8 +217,6 @@ def build_price_table(current_lat, current_lon, max_miles=1000):
         "latest_esso_file": esso_file,
         "petro_source": petro_source,
         "esso_source": esso_source,
-        "petro_source_rows": len(petro_df),
-        "esso_source_rows": len(esso_df),
         "display_rows": len(df),
     }
 
