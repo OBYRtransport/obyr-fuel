@@ -174,7 +174,6 @@ def places_input(label: str, search_key: str, select_key: str, placeholder: str)
             key=search_key,
             placeholder=placeholder,
             clear_on_submit=False,
-            clearable=True,
             label_visibility="collapsed",
         )
 
