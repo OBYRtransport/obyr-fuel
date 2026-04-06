@@ -248,17 +248,27 @@ def _canada_waypoints(
     """
     Return a pipe-separated waypoints string to anchor the route inside Canada.
 
-    Toronto → Eastern Canada (QC/NB/NS/NL/PE): insert Montreal as waypoint
-    so Google stays on 401→20 instead of cutting through New York state.
-    Other routes (e.g. westbound) don't need a waypoint.
+    Toronto → Atlantic Canada: two waypoints to stay on the 401→20→TCH corridor:
+      1. Montreal (via:45.5017,-73.5673) — prevents NY state shortcut
+      2. Rivière-du-Loup, QC (via:47.8333,-69.5333) — prevents Maine shortcut
+         after Montreal; keeps route on Autoroute 20 → Trans-Canada Hwy 2 into NB
+
+    Destination in NB/NS/PE/NL means we need both waypoints.
+    Destination in QC east of Montreal only needs waypoint 1.
     """
-    # Destination is east of ~-72° lon (roughly the QC/US border longitude)
-    # and south of ~50° lat — i.e. Atlantic Canada or Eastern QC
-    dest_is_east = dest_lon > -76.0 and dest_lat < 50.0
     origin_is_ontario = origin_lon < -74.0 and origin_lat < 47.0
 
-    if origin_is_ontario and dest_is_east:
-        # Via Montreal (Pont-Champlain / Autoroute 20 corridor)
+    # Atlantic Canada provinces (east of QC)
+    dest_is_atlantic = dest_lon > -68.0 and dest_lat < 50.0
+
+    # Eastern QC or Atlantic — destination east of ~-76° lon
+    dest_is_east = dest_lon > -76.0 and dest_lat < 50.0
+
+    if origin_is_ontario and dest_is_atlantic:
+        # Full corridor: Montreal + Rivière-du-Loup to stay in Canada all the way
+        return "via:45.5017,-73.5673|via:47.8333,-69.5333"
+    elif origin_is_ontario and dest_is_east:
+        # Eastern QC only — Montreal waypoint sufficient
         return "via:45.5017,-73.5673"
     return None
 
