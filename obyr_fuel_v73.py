@@ -147,7 +147,7 @@ def _place_coords(place_id: str, api_key: str):
     return None
 
 
-def _search_places(query: str) -> list:
+def _search_places(query: str, **kwargs) -> list:
     """
     Search function for streamlit-searchbox.
     Returns list of (label, value) tuples where value is place_id.
