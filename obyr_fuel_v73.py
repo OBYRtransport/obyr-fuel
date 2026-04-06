@@ -306,12 +306,7 @@ def _stale_banner(meta):
 def _hl(col_type):
     def f(val):
         if pd.isna(val): return ""
-        if col_type == "network":
-            return {"Petro":"background-color:#fee2e2;color:#991b1b;font-weight:600","Esso":"background-color:#dbeafe;color:#1e40af;font-weight:600","Irving":"background-color:#dcfce7;color:#166534;font-weight:600"}.get(str(val),"")
-        try:
-            v = float(val)
-        except (ValueError, TypeError):
-            return ""
+        v = float(val)
         if col_type == "savings":
             if v > 0: return "background-color:#d1fae5;color:#166534"
             if v < 0: return "background-color:#fee2e2;color:#991b1b"
