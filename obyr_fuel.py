@@ -25,6 +25,7 @@ from fuel_engine import (
     DEFAULT_YARD,
     NETWORK_COLOURS,
     authenticate_driver,
+    get_driver_full_name,
     build_price_table,
     get_base_dir,
     get_route_polyline,
@@ -38,11 +39,9 @@ try:
 except ImportError:
     MAP_AVAILABLE = False
 
-# streamlit_geolocation is intentionally NOT imported at the top level.
-# Importing it causes the widget to inject a white DOM element on every page,
-# including the login screen.  It is imported lazily inside main() only after
-# the user has successfully authenticated.
-GPS_AVAILABLE = False  # updated at runtime after login gate
+# streamlit_geolocation is imported lazily inside main() AFTER the login gate.
+# A top-level import causes the component to register with Streamlit immediately
+# and render a white box on the login page even before any if-checks run.
 
 st.set_page_config(
     page_title="OBYR Fuel", page_icon="⛽",
@@ -102,7 +101,7 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 
 def _init_session():
     defaults = {
-        "logged_in": False, "driver_name": "",
+        "logged_in": False, "driver_name": "", "driver_full_name": "",
         "current_lat": DEFAULT_YARD["lat"], "current_lon": DEFAULT_YARD["lon"],
         "current_label": DEFAULT_YARD["label"],
         "dest_lat": None, "dest_lon": None, "dest_label": "",
@@ -308,18 +307,23 @@ def do_login():
         if LOGO_PATH.exists():
             st.image(str(LOGO_PATH), width=280)
         st.markdown("### Driver Login")
-        username = st.text_input("Username", key="login_user")
-        password = st.text_input("Password", type="password", key="login_pass")
-        if st.button("Login", type="primary", use_container_width=True):
+        with st.form("login_form", clear_on_submit=False):
+            username = st.text_input("E-mail", key="login_user",
+                                     placeholder="your@email.com")
+            password = st.text_input("Password", type="password", key="login_pass")
+            submitted = st.form_submit_button("Login", type="primary",
+                                              use_container_width=True)
+        if submitted:
             if not username or not password:
-                st.error("Please enter your username and password.")
+                st.error("Please enter your e-mail and password.")
             elif authenticate_driver(username, password):
                 st.session_state.logged_in = True
                 st.session_state.driver_name = str(username).strip()
+                st.session_state.driver_full_name = get_driver_full_name(username)
                 st.rerun()
             else:
                 time.sleep(0.6)
-                st.error("Incorrect username or password.")
+                st.error("Incorrect e-mail or password.")
         st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
@@ -369,23 +373,33 @@ def _hl(col_type):
 def main():
     _init_session()
 
-    # Fix 1: GPS only after login — no white skeleton on login screen
     do_login()
+    # ── Everything below only runs for authenticated users ─────────────────
 
-    # ── Lazy GPS import ────────────────────────────────────────────────────
-    # Only reached when the user is authenticated (do_login calls st.stop()
-    # for unauthenticated users).  Importing here prevents the widget from
-    # rendering any DOM element on the login page.
+    # Lazy GPS import — must be here, NOT at module top-level.
+    # streamlit_geolocation registers a frontend component on import;
+    # doing it at the top renders a white box on the login page.
     gps_data = None
     try:
-        from streamlit_geolocation import streamlit_geolocation as _geo
-        gps_data = _geo()
+        from streamlit_geolocation import streamlit_geolocation
+        gps_data = streamlit_geolocation()
     except Exception:
         pass
 
     with st.sidebar:
         st.markdown("## ⛽ OBYR Fuel")
-        st.success(f"👤 {st.session_state.driver_name}")
+        full_name = st.session_state.get("driver_full_name", "")
+        email     = st.session_state.driver_name
+        if full_name:
+            st.markdown(
+                f"<div style='line-height:1.6;margin-bottom:0.5rem'>"
+                f"<span style='font-weight:700;color:#f8fafc;font-size:0.95rem'>👤 {full_name}</span><br>"
+                f"<span style='color:#94a3b8;font-size:0.78rem'>{email}</span>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+        else:
+            st.success(f"👤 {email}")
         if st.button("Logout", use_container_width=True):
             for k in list(st.session_state.keys()):
                 del st.session_state[k]

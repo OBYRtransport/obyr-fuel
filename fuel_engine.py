@@ -479,9 +479,8 @@ def list_local_candidates(prefix: str) -> List[Path]:
 # ---------------------------------------------------------------------------
 
 def read_driver_master() -> Optional[pd.DataFrame]:
-    # Always try the local file first — it is the authoritative source for
-    # hashed passwords.  Google Drive is only used as a fallback when the
-    # local file is missing (e.g. first deploy on a fresh machine).
+    # Local file is authoritative — always try it first so the hashed
+    # passwords on disk take precedence over any stale Google Drive copy.
     path = get_base_dir() / "driver_master.csv"
     try:
         df = pd.read_csv(path)
@@ -490,7 +489,7 @@ def read_driver_master() -> Optional[pd.DataFrame]:
             return df
     except Exception:
         pass
-    # Fallback: try Google Drive
+    # Fallback: Google Drive (used only when local file is absent)
     try:
         for item in list_drive_files():
             if item["name"].strip().lower() == "driver_master.csv":
@@ -518,7 +517,7 @@ def authenticate_driver(username: str, password: str) -> bool:
 
 
 def get_driver_full_name(username: str) -> str:
-    """Return 'FIRST LAST' for the given username, or empty string if not found."""
+    """Return 'First Last' for the given username, or empty string if not found."""
     df = read_driver_master()
     if df is None:
         return ""
@@ -527,7 +526,7 @@ def get_driver_full_name(username: str) -> str:
     if match.empty:
         return ""
     first = str(match.iloc[0].get("First Name", "")).strip().title()
-    last  = str(match.iloc[0].get("Last Name", "")).strip().title()
+    last  = str(match.iloc[0].get("Last Name",  "")).strip().title()
     return f"{first} {last}".strip()
 
 # ---------------------------------------------------------------------------
