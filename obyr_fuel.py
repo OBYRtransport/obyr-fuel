@@ -39,7 +39,8 @@ try:
 except ImportError:
     MAP_AVAILABLE = False
 
-# streamlit_geolocation imported lazily in main() after login gate only.
+# streamlit_geolocation imported lazily inside main() after login gate —
+# a top-level import registers the component immediately and renders a white box.
 
 st.set_page_config(
     page_title="OBYR Fuel", page_icon="⛽",
@@ -87,26 +88,17 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 .route-google   { background: #dcfce7; color: #166534; }
 .route-fallback { background: #fef9c3; color: #854d0e; }
 .route-radius   { background: #dbeafe; color: #1e40af; }
-.login-card {
-    background: white; border-radius: 16px; padding: 2.5rem;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.08); margin-top: 1rem;
+/* Login column styling — applied to the stColumn container directly
+   so there is no empty white box before content renders */
+[data-testid="stMain"] [data-testid="stColumn"]:nth-child(2) {
+    background: white;
+    border-radius: 16px;
+    padding: 2.5rem !important;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    margin-top: 1rem;
 }
 .footer { font-size: 0.72rem; color: #94a3b8; text-align: center; padding: 1.5rem 0 0.5rem; }
 [data-testid="stSkeleton"] { display: none !important; }
-
-/* Hide the streamlit-geolocation component white box everywhere.
-   It is only needed post-login inside the sidebar, so we hide all
-   top-level custom component iframes that appear outside the sidebar. */
-.main iframe,
-.main [data-testid="stCustomComponentV1"],
-section[data-testid="stMain"] iframe,
-section[data-testid="stMain"] [data-testid="stCustomComponentV1"] {
-    display: none !important;
-    height: 0 !important;
-    width: 0 !important;
-    position: absolute !important;
-    pointer-events: none !important;
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -315,7 +307,6 @@ def do_login():
         return
     col1, col2, col3 = st.columns([1, 1.6, 1])
     with col2:
-        st.markdown("<div class='login-card'>", unsafe_allow_html=True)
         if LOGO_PATH.exists():
             st.image(str(LOGO_PATH), width=280)
         st.markdown("### Driver Login")
@@ -336,7 +327,6 @@ def do_login():
             else:
                 time.sleep(0.6)
                 st.error("Incorrect e-mail or password.")
-        st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
 
@@ -388,7 +378,6 @@ def main():
     do_login()
     # Only authenticated users reach this point
 
-    # Lazy import — keeps the component off the login page entirely
     gps_data = None
     try:
         from streamlit_geolocation import streamlit_geolocation
