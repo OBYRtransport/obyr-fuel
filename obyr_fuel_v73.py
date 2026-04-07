@@ -147,63 +147,100 @@ def _place_coords(place_id: str, api_key: str):
     return None
 
 
+def _search_places(query: str, **kwargs) -> list:
+    """
+    Search function for streamlit-searchbox.
+    Returns list of (label, value) tuples where value is place_id.
+    Called on every keystroke — results appear instantly in dropdown.
+    """
+    if not query or len(query) < 2 or not MAPS_API_KEY:
+        return []
+    suggestions = _places_suggestions(query, MAPS_API_KEY)
+    return [s["description"] for s in suggestions]
+
+
 def places_input(label: str, search_key: str, select_key: str, placeholder: str):
     """
-    Server-side two-step Places autocomplete:
-      1. text_input  → calls Places Autocomplete API → suggestions list
-      2. selectbox   → user picks one → Place Details API → lat/lon
-    Returns dict {lat, lon, address} or None. No iframes, no JS crashes.
+    Instant Google Places autocomplete using streamlit-searchbox.
+    As-you-type suggestions appear immediately — no server round-trip delay.
+    Falls back to server-side selectbox if searchbox not available.
     """
-    query = st.text_input(label, placeholder=placeholder, key=search_key)
-    if not query or len(query) < 3:
+    try:
+        from streamlit_searchbox import st_searchbox
+
+        st.markdown(f"**{label}**")
+        chosen = st_searchbox(
+            _search_places,
+            key=search_key,
+            placeholder=placeholder,
+            clear_on_submit=False,
+            label_visibility="collapsed",
+        )
+
+        if not chosen:
+            return None
+
+        # chosen is the description string — look up coordinates
+        suggestions = _places_suggestions(chosen, MAPS_API_KEY)
+        if not suggestions:
+            return None
+
+        # Find exact match or use first result
+        match = next((s for s in suggestions if s["description"] == chosen), suggestions[0])
+        result = _place_coords(match["place_id"], MAPS_API_KEY)
+        if result:
+            lat, lon, addr = result
+            st.caption(f"✓ {lat:.4f}, {lon:.4f}")
+            return {"lat": lat, "lon": lon, "address": addr}
         return None
 
-    if not MAPS_API_KEY:
-        # Nominatim fallback when no key configured
-        from geopy.geocoders import Nominatim
+    except ImportError:
+        # Fallback: server-side selectbox (reliable but not instant)
+        query = st.text_input(label, placeholder=placeholder, key=search_key)
+        if not query or len(query) < 3:
+            return None
 
-        @st.cache_resource
-        def _nom():
-            return Nominatim(user_agent="obyr_fuel_v73")
+        if not MAPS_API_KEY:
+            from geopy.geocoders import Nominatim
+            @st.cache_resource
+            def _nom():
+                return Nominatim(user_agent="obyr_fuel_v73")
+            @st.cache_data(ttl=3600, show_spinner=False)
+            def _geo(a):
+                try:
+                    loc = _nom().geocode(a + ", Canada", timeout=5)
+                    if loc:
+                        return float(loc.latitude), float(loc.longitude)
+                except Exception:
+                    pass
+                return None, None
+            lat, lon = _geo(query)
+            if lat:
+                st.caption(f"📌 {lat:.4f}, {lon:.4f}")
+                return {"lat": lat, "lon": lon, "address": query}
+            st.caption("Could not locate — try adding city and province")
+            return None
 
-        @st.cache_data(ttl=3600, show_spinner=False)
-        def _geo(a):
-            try:
-                loc = _nom().geocode(a + ", Canada", timeout=5)
-                if loc:
-                    return float(loc.latitude), float(loc.longitude)
-            except Exception:
-                pass
-            return None, None
+        suggestions = _places_suggestions(query, MAPS_API_KEY)
+        if not suggestions:
+            st.caption("No suggestions — try a different search")
+            return None
 
-        lat, lon = _geo(query)
-        if lat:
-            st.caption(f"📌 {lat:.4f}, {lon:.4f}")
-            return {"lat": lat, "lon": lon, "address": query}
-        st.caption("Could not locate — try adding city and province")
+        options = ["— select a result —"] + [s["description"] for s in suggestions]
+        chosen  = st.selectbox("", options=options, key=select_key, label_visibility="collapsed")
+        if chosen == "— select a result —":
+            return None
+
+        place_id = next((s["place_id"] for s in suggestions if s["description"] == chosen), None)
+        if not place_id:
+            return None
+
+        result = _place_coords(place_id, MAPS_API_KEY)
+        if result:
+            lat, lon, addr = result
+            st.caption(f"✓ {lat:.4f}, {lon:.4f}")
+            return {"lat": lat, "lon": lon, "address": addr}
         return None
-
-    suggestions = _places_suggestions(query, MAPS_API_KEY)
-    if not suggestions:
-        st.caption("No suggestions — try a different search")
-        return None
-
-    options = ["— select a result —"] + [s["description"] for s in suggestions]
-    chosen  = st.selectbox("", options=options, key=select_key, label_visibility="collapsed")
-
-    if chosen == "— select a result —":
-        return None
-
-    place_id = next((s["place_id"] for s in suggestions if s["description"] == chosen), None)
-    if not place_id:
-        return None
-
-    result = _place_coords(place_id, MAPS_API_KEY)
-    if result:
-        lat, lon, addr = result
-        st.caption(f"✓ {lat:.4f}, {lon:.4f}")
-        return {"lat": lat, "lon": lon, "address": addr}
-    return None
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
@@ -306,7 +343,12 @@ def _stale_banner(meta):
 def _hl(col_type):
     def f(val):
         if pd.isna(val): return ""
-        v = float(val)
+        if col_type == "network":
+            return {"Petro":"background-color:#fee2e2;color:#991b1b;font-weight:600","Esso":"background-color:#dbeafe;color:#1e40af;font-weight:600","Irving":"background-color:#dcfce7;color:#166534;font-weight:600"}.get(str(val),"")
+        try:
+            v = float(val)
+        except (ValueError, TypeError):
+            return ""
         if col_type == "savings":
             if v > 0: return "background-color:#d1fae5;color:#166534"
             if v < 0: return "background-color:#fee2e2;color:#991b1b"
