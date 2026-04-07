@@ -516,6 +516,20 @@ def authenticate_driver(username: str, password: str) -> bool:
         return False
     return verify_password(password, str(match.iloc[0]["Password"]).strip())
 
+
+def get_driver_full_name(username: str) -> str:
+    """Return 'FIRST LAST' for the given username, or empty string if not found."""
+    df = read_driver_master()
+    if df is None:
+        return ""
+    df.columns = [str(c).strip() for c in df.columns]
+    match = df[df["Username"].astype(str).str.strip() == str(username).strip()]
+    if match.empty:
+        return ""
+    first = str(match.iloc[0].get("First Name", "")).strip().title()
+    last  = str(match.iloc[0].get("Last Name", "")).strip().title()
+    return f"{first} {last}".strip()
+
 # ---------------------------------------------------------------------------
 # Master location tables
 # ---------------------------------------------------------------------------
