@@ -778,28 +778,34 @@ def match_petro(petro_prices: pd.DataFrame, master_petro: pd.DataFrame) -> Tuple
         return pd.DataFrame(columns=_EMPTY_STATION_COLS), {"price_rows": 0, "matched_rows": 0, "unmatched_rows": 0}
     matched = petro_prices.merge(
         master_petro[["match_key", "Station_Name", "Address", "Latitude", "Longitude"]],
-        on="match_key", how="left", suffixes=("", "_master"),
+        on="match_key", how="left", suffixes=("_price", "_master"),
     )
-    matched["Address_final"] = matched["Address"].fillna("Address missing")
-    matched["Station_Final"] = matched["Station_Name_master"].fillna(matched["Station_Name"])
+    # Address_master is the full street address from the master CSV.
+    # Address_price comes from the daily price file and is always empty/NaN for Petro.
+    addr_col = "Address_master" if "Address_master" in matched.columns else "Address"
+    name_col = "Station_Name_master" if "Station_Name_master" in matched.columns else "Station_Name"
+    price_name_col = "Station_Name_price" if "Station_Name_price" in matched.columns else "Station_Name"
+
+    matched["Address_final"] = matched[addr_col].fillna("Address missing")
+    matched["Station_Final"] = matched[name_col].fillna(matched[price_name_col])
     matched["Latitude"] = pd.to_numeric(matched["Latitude"], errors="coerce")
     matched["Longitude"] = pd.to_numeric(matched["Longitude"], errors="coerce")
     matched["Network"] = "Petro"
     result = pd.DataFrame({
         "Station_Name": matched["Station_Final"],
-        "Province": matched["Province"],
-        "Network": matched["Network"],
-        "Address": matched["Address_final"],
-        "Latitude": matched["Latitude"],
-        "Longitude": matched["Longitude"],
-        "Price": matched["Price"],
-        "City": np.nan,
-        "Matched": matched["Address"].notna(),
+        "Province":     matched["Province"],
+        "Network":      matched["Network"],
+        "Address":      matched["Address_final"],
+        "Latitude":     matched["Latitude"],
+        "Longitude":    matched["Longitude"],
+        "Price":        matched["Price"],
+        "City":         np.nan,
+        "Matched":      matched[addr_col].notna(),
     })
     result = result.drop_duplicates(subset=["Station_Name", "Province", "Price"]).reset_index(drop=True)
     stats = {
-        "price_rows": len(result),
-        "matched_rows": int(result["Matched"].sum()),
+        "price_rows":     len(result),
+        "matched_rows":   int(result["Matched"].sum()),
         "unmatched_rows": int((~result["Matched"]).sum()),
     }
     return result, stats
