@@ -1,5 +1,5 @@
 """
-OBYR Fuel V7.3 — Streamlit UI
+OBYR Fuel — Streamlit UI
 Fixes from V7.2:
   1. White box on login — GPS widget only mounts post-login, skeleton hidden
   2. Address entry — server-side Google Places Autocomplete. User types into
@@ -21,7 +21,7 @@ import pandas as pd
 import requests as req
 import streamlit as st
 
-from fuel_engine_v72 import (
+from fuel_engine import (
     DEFAULT_YARD,
     NETWORK_COLOURS,
     authenticate_driver,
@@ -204,7 +204,7 @@ def places_input(label: str, search_key: str, select_key: str, placeholder: str)
             from geopy.geocoders import Nominatim
             @st.cache_resource
             def _nom():
-                return Nominatim(user_agent="obyr_fuel_v73")
+                return Nominatim(user_agent="obyr_fuel")
             @st.cache_data(ttl=3600, show_spinner=False)
             def _geo(a):
                 try:
@@ -377,7 +377,7 @@ def main():
     do_login()
 
     with st.sidebar:
-        st.markdown("## ⛽ OBYR Fuel V7.3")
+        st.markdown("## ⛽ OBYR Fuel")
         st.success(f"👤 {st.session_state.driver_name}")
         if st.button("Logout", use_container_width=True):
             for k in list(st.session_state.keys()):
@@ -478,7 +478,7 @@ def main():
     with hcol1:
         st.markdown("## ⛽ OBYR Fuel — Triple Network")
         st.markdown(
-            f"V7.3 · From: **{clab}** · To: **{dlab}** "
+            f" · From: **{clab}** · To: **{dlab}** "
             f"{'· Corridor 🛣️' if has_dest else '· Radius 📡'} "
             f"· Network: **{network}** {badge}",
             unsafe_allow_html=True,
@@ -575,7 +575,7 @@ def main():
                 st.dataframe(unmatched, hide_index=True, use_container_width=True)
 
     st.markdown(
-        f"<div class='footer'>© {datetime.now().year} OBYR Transportation Group Ltd. · OBYR Fuel V7.3</div>",
+        f"<div class='footer'>© {datetime.now().year} OBYR Transportation Group Ltd. · OBYR Fuel</div>",
         unsafe_allow_html=True,
     )
 

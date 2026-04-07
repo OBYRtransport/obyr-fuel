@@ -1,14 +1,7 @@
 """
-OBYR Fuel Engine V7.2
-Upgrades corridor filtering from straight-line math to real Google Directions
-API highway routing. All other logic (price parsing, matching, tax, scoring)
-is identical to V6.1.
-
-Key change:
-  corridor_deviation()  →  get_route_polyline() + perpendicular distance to
-                           actual road polyline decoded from Google Directions.
-
-Canadian provinces only — US stations are excluded by province whitelist.
+OBYR Fuel Engine — Production
+Production engine — Google Directions API routing, SHA-256 hashed passwords,
+Canadian-only station filtering, and tri-network price aggregation.
 """
 from __future__ import annotations
 
@@ -495,7 +488,7 @@ def read_driver_master() -> Optional[pd.DataFrame]:
                 return df
     except Exception:
         pass
-    path = get_base_dir() / "Locations" / "driver_master.csv"
+    path = get_base_dir() / "driver_master.csv"
     try:
         df = pd.read_csv(path)
         df.columns = [c.strip() for c in df.columns]
