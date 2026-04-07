@@ -25,7 +25,6 @@ from fuel_engine import (
     DEFAULT_YARD,
     NETWORK_COLOURS,
     authenticate_driver,
-    get_driver_full_name,
     build_price_table,
     get_base_dir,
     get_route_polyline,
@@ -39,11 +38,11 @@ try:
 except ImportError:
     MAP_AVAILABLE = False
 
-try:
-    from streamlit_geolocation import streamlit_geolocation
-    GPS_AVAILABLE = True
-except ImportError:
-    GPS_AVAILABLE = False
+# streamlit_geolocation is intentionally NOT imported at the top level.
+# Importing it causes the widget to inject a white DOM element on every page,
+# including the login screen.  It is imported lazily inside main() only after
+# the user has successfully authenticated.
+GPS_AVAILABLE = False  # updated at runtime after login gate
 
 st.set_page_config(
     page_title="OBYR Fuel", page_icon="⛽",
@@ -103,7 +102,7 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 
 def _init_session():
     defaults = {
-        "logged_in": False, "driver_name": "", "driver_full_name": "",
+        "logged_in": False, "driver_name": "",
         "current_lat": DEFAULT_YARD["lat"], "current_lon": DEFAULT_YARD["lon"],
         "current_label": DEFAULT_YARD["label"],
         "dest_lat": None, "dest_lon": None, "dest_label": "",
@@ -317,7 +316,6 @@ def do_login():
             elif authenticate_driver(username, password):
                 st.session_state.logged_in = True
                 st.session_state.driver_name = str(username).strip()
-                st.session_state.driver_full_name = get_driver_full_name(username)
                 st.rerun()
             else:
                 time.sleep(0.6)
@@ -372,26 +370,22 @@ def main():
     _init_session()
 
     # Fix 1: GPS only after login — no white skeleton on login screen
-    gps_data = None
-    if st.session_state.logged_in and GPS_AVAILABLE:
-        gps_data = streamlit_geolocation()
-
     do_login()
+
+    # ── Lazy GPS import ────────────────────────────────────────────────────
+    # Only reached when the user is authenticated (do_login calls st.stop()
+    # for unauthenticated users).  Importing here prevents the widget from
+    # rendering any DOM element on the login page.
+    gps_data = None
+    try:
+        from streamlit_geolocation import streamlit_geolocation as _geo
+        gps_data = _geo()
+    except Exception:
+        pass
 
     with st.sidebar:
         st.markdown("## ⛽ OBYR Fuel")
-        full_name = st.session_state.get("driver_full_name", "")
-        email     = st.session_state.driver_name
-        if full_name:
-            st.markdown(
-                f"<div style='line-height:1.4'>"
-                f"<span style='font-weight:700;color:#f8fafc;font-size:0.95rem'>👤 {full_name}</span><br>"
-                f"<span style='color:#94a3b8;font-size:0.78rem'>{email}</span>"
-                f"</div>",
-                unsafe_allow_html=True,
-            )
-        else:
-            st.success(f"👤 {email}")
+        st.success(f"👤 {st.session_state.driver_name}")
         if st.button("Logout", use_container_width=True):
             for k in list(st.session_state.keys()):
                 del st.session_state[k]
