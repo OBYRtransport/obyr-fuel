@@ -308,18 +308,24 @@ def do_login():
         if LOGO_PATH.exists():
             st.image(str(LOGO_PATH), width=280)
         st.markdown("### Driver Login")
-        username = st.text_input("Username", key="login_user")
-        password = st.text_input("Password", type="password", key="login_pass")
-        if st.button("Login", type="primary", use_container_width=True):
+        # st.form lets the driver press Enter in the password field to submit
+        with st.form("login_form", clear_on_submit=False):
+            username = st.text_input("E-mail", key="login_user",
+                                     placeholder="your@email.com")
+            password = st.text_input("Password", type="password",
+                                     key="login_pass")
+            submitted = st.form_submit_button("Login", type="primary",
+                                              use_container_width=True)
+        if submitted:
             if not username or not password:
-                st.error("Please enter your username and password.")
+                st.error("Please enter your e-mail and password.")
             elif authenticate_driver(username, password):
                 st.session_state.logged_in = True
                 st.session_state.driver_name = str(username).strip()
                 st.rerun()
             else:
                 time.sleep(0.6)
-                st.error("Incorrect username or password.")
+                st.error("Incorrect e-mail or password.")
         st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
@@ -369,12 +375,14 @@ def _hl(col_type):
 def main():
     _init_session()
 
-    # Fix 1: GPS only after login — no white skeleton on login screen
-    gps_data = None
-    if st.session_state.logged_in and GPS_AVAILABLE:
-        gps_data = streamlit_geolocation()
-
+    # GPS must be acquired AFTER the login gate — calling streamlit_geolocation()
+    # before do_login() causes a white widget box to appear on the login page.
     do_login()
+
+    # At this point the user is authenticated.  Safe to mount GPS widget.
+    gps_data = None
+    if GPS_AVAILABLE:
+        gps_data = streamlit_geolocation()
 
     with st.sidebar:
         st.markdown("## ⛽ OBYR Fuel")

@@ -479,6 +479,18 @@ def list_local_candidates(prefix: str) -> List[Path]:
 # ---------------------------------------------------------------------------
 
 def read_driver_master() -> Optional[pd.DataFrame]:
+    # Always try the local file first — it is the authoritative source for
+    # hashed passwords.  Google Drive is only used as a fallback when the
+    # local file is missing (e.g. first deploy on a fresh machine).
+    path = get_base_dir() / "driver_master.csv"
+    try:
+        df = pd.read_csv(path)
+        df.columns = [c.strip() for c in df.columns]
+        if not df.empty:
+            return df
+    except Exception:
+        pass
+    # Fallback: try Google Drive
     try:
         for item in list_drive_files():
             if item["name"].strip().lower() == "driver_master.csv":
@@ -488,13 +500,7 @@ def read_driver_master() -> Optional[pd.DataFrame]:
                 return df
     except Exception:
         pass
-    path = get_base_dir() / "driver_master.csv"
-    try:
-        df = pd.read_csv(path)
-        df.columns = [c.strip() for c in df.columns]
-        return df
-    except Exception:
-        return None
+    return None
 
 
 def authenticate_driver(username: str, password: str) -> bool:
