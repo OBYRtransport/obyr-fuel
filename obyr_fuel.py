@@ -39,8 +39,7 @@ try:
 except ImportError:
     MAP_AVAILABLE = False
 
-# streamlit_geolocation imported lazily inside main() after login gate —
-# a top-level import registers the component immediately and renders a white box.
+# streamlit_geolocation imported lazily in main() after login gate only.
 
 st.set_page_config(
     page_title="OBYR Fuel", page_icon="⛽",
@@ -88,15 +87,7 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 .route-google   { background: #dcfce7; color: #166534; }
 .route-fallback { background: #fef9c3; color: #854d0e; }
 .route-radius   { background: #dbeafe; color: #1e40af; }
-/* Login column styling — applied to the stColumn container directly
-   so there is no empty white box before content renders */
-[data-testid="stMain"] [data-testid="stColumn"]:nth-child(2) {
-    background: white;
-    border-radius: 16px;
-    padding: 2.5rem !important;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
-    margin-top: 1rem;
-}
+.login-heading  { color: #0f172a !important; font-size: 1.4rem; font-weight: 700; margin-bottom: 1rem; }
 .footer { font-size: 0.72rem; color: #94a3b8; text-align: center; padding: 1.5rem 0 0.5rem; }
 [data-testid="stSkeleton"] { display: none !important; }
 </style>
@@ -309,7 +300,7 @@ def do_login():
     with col2:
         if LOGO_PATH.exists():
             st.image(str(LOGO_PATH), width=280)
-        st.markdown("### Driver Login")
+        st.markdown("<p class='login-heading'>Driver Login</p>", unsafe_allow_html=True)
         with st.form("login_form", clear_on_submit=False):
             username = st.text_input("E-mail", key="login_user",
                                      placeholder="your@email.com")
