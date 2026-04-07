@@ -39,9 +39,7 @@ try:
 except ImportError:
     MAP_AVAILABLE = False
 
-# streamlit_geolocation is imported lazily inside main() AFTER the login gate.
-# A top-level import causes the component to register with Streamlit immediately
-# and render a white box on the login page even before any if-checks run.
+# streamlit_geolocation imported lazily in main() after login gate only.
 
 st.set_page_config(
     page_title="OBYR Fuel", page_icon="⛽",
@@ -95,6 +93,20 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 }
 .footer { font-size: 0.72rem; color: #94a3b8; text-align: center; padding: 1.5rem 0 0.5rem; }
 [data-testid="stSkeleton"] { display: none !important; }
+
+/* Hide the streamlit-geolocation component white box everywhere.
+   It is only needed post-login inside the sidebar, so we hide all
+   top-level custom component iframes that appear outside the sidebar. */
+.main iframe,
+.main [data-testid="stCustomComponentV1"],
+section[data-testid="stMain"] iframe,
+section[data-testid="stMain"] [data-testid="stCustomComponentV1"] {
+    display: none !important;
+    height: 0 !important;
+    width: 0 !important;
+    position: absolute !important;
+    pointer-events: none !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -374,11 +386,9 @@ def main():
     _init_session()
 
     do_login()
-    # ── Everything below only runs for authenticated users ─────────────────
+    # Only authenticated users reach this point
 
-    # Lazy GPS import — must be here, NOT at module top-level.
-    # streamlit_geolocation registers a frontend component on import;
-    # doing it at the top renders a white box on the login page.
+    # Lazy import — keeps the component off the login page entirely
     gps_data = None
     try:
         from streamlit_geolocation import streamlit_geolocation
