@@ -293,7 +293,7 @@ def get_fuel_levels(device_ids: List[str]) -> Dict[str, float]:
 def get_fuel_economy(device_ids: List[str], days: int = 30) -> Dict[str, float]:
     """
     Return average fuel economy in L/100km per device over the last `days` days.
-    Uses FuelEconomy diagnostic. Falls back to HIGHWAY_L_100KM if unavailable.
+    Uses FuelEconomy diagnostic. Falls back to 38.0 if unavailable.
     """
     FUEL_ECONOMY_DIAG = "DiagnosticFuelEconomyId"
 
@@ -311,7 +311,7 @@ def get_fuel_economy(device_ids: List[str], days: int = 30) -> Dict[str, float]:
             },
         })
     except Exception:
-        return {dev_id: HIGHWAY_L_100KM for dev_id in device_ids}
+        return {dev_id: 38.0 for dev_id in device_ids}
 
     # Average all readings per device
     sums:   Dict[str, float] = {}
@@ -331,7 +331,7 @@ def get_fuel_economy(device_ids: List[str], days: int = 30) -> Dict[str, float]:
             # Geotab may return km/L — convert to L/100km if needed
             economy[dev_id] = (100.0 / avg) if avg > 5 else avg
         else:
-            economy[dev_id] = HIGHWAY_L_100KM
+            economy[dev_id] = 38.0
 
     return economy
 
