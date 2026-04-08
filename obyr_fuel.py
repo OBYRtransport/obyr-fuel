@@ -93,6 +93,9 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 .login-heading  { font-size: 1.4rem; font-weight: 700; margin-bottom: 1rem; }
 .footer { font-size: 0.72rem; color: #94a3b8; text-align: center; padding: 1.5rem 0 0.5rem; }
 [data-testid="stSkeleton"] { display: none !important; }
+#MainMenu { visibility: hidden; }
+footer { visibility: hidden; }
+header { visibility: hidden; }
 </style>
 """, unsafe_allow_html=True)
 
