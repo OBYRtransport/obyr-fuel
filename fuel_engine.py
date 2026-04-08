@@ -35,7 +35,15 @@ except Exception:
 # Constants
 # ---------------------------------------------------------------------------
 
-DRIVE_FOLDER_ID = "18Cqpj-pVLDk5Esx2r3Cj_IR6Bd7lubCT"
+# Root folder (fuel.obyr@gmail.com → OBYR Fuel Prices)
+DRIVE_FOLDER_ID = "1fMCdA33WTFN_SZiRUIb-tROK7Do9gq8Y"
+
+# Per-network subfolders — price CSVs live here, driver_master.csv in root
+DRIVE_SUBFOLDER_IDS = {
+    "petro":  None,   # resolved at runtime from folder listing
+    "esso":   None,
+    "irving": None,
+}
 
 DEFAULT_YARD = {
     "lat": 43.6205,
@@ -421,13 +429,13 @@ def get_drive_service():
     raise RuntimeError("Missing Google Drive credentials")
 
 
-def list_drive_files() -> List[dict]:
+def list_drive_files(folder_id: str = DRIVE_FOLDER_ID) -> List[dict]:
     service = get_drive_service()
     results = (
         service.files()
         .list(
-            q=f"'{DRIVE_FOLDER_ID}' in parents and trashed = false",
-            fields="files(id, name, modifiedTime)",
+            q=f"'{folder_id}' in parents and trashed = false",
+            fields="files(id, name, modifiedTime, mimeType)",
             orderBy="modifiedTime desc",
             pageSize=200,
         )
@@ -449,12 +457,69 @@ def download_drive_file(file_id: str, filename: str) -> io.BytesIO:
     return fh
 
 
-def list_drive_candidates(prefix: str) -> List[dict]:
+# Cache subfolder IDs so we only look them up once per process
+_SUBFOLDER_ID_CACHE: Dict[str, str] = {}
+
+
+def _get_subfolder_id(network_name: str) -> Optional[str]:
+    """Return the Drive folder ID for Petro/Esso/Irving subfolder, cached."""
+    key = network_name.lower()
+    if key in _SUBFOLDER_ID_CACHE:
+        return _SUBFOLDER_ID_CACHE[key]
     try:
-        files = list_drive_files()
+        files = list_drive_files(DRIVE_FOLDER_ID)
+        for f in files:
+            if (f.get("mimeType") == "application/vnd.google-apps.folder"
+                    and f["name"].lower() == key):
+                _SUBFOLDER_ID_CACHE[key] = f["id"]
+                return f["id"]
     except Exception:
-        return []
-    matching = [f for f in files if f["name"].startswith(prefix)]
+        pass
+    return None
+
+
+def list_drive_candidates(prefix: str) -> List[dict]:
+    """
+    Search for price CSVs matching prefix in the appropriate subfolder
+    (Petro/Esso/Irving) AND the root folder as fallback.
+    Supports structure:
+        OBYR Fuel Prices/
+            Petro/petro_prices_YYYY-MM-DD.csv
+            Esso/esso_prices_YYYY-MM-DD.csv
+            Irving/irving_prices_YYYY-MM-DD.csv
+            driver_master.csv   (root only)
+    """
+    network_map = {
+        "petro_prices_":  "petro",
+        "esso_prices_":   "esso",
+        "irving_prices_": "irving",
+    }
+    network = next((v for k, v in network_map.items() if prefix.startswith(k)), None)
+
+    all_files: List[dict] = []
+
+    # Always search root (catches driver_master.csv and any root-level CSVs)
+    try:
+        all_files.extend(list_drive_files(DRIVE_FOLDER_ID))
+    except Exception:
+        pass
+
+    # Also search the appropriate subfolder
+    if network:
+        subfolder_id = _get_subfolder_id(network)
+        if subfolder_id:
+            try:
+                all_files.extend(list_drive_files(subfolder_id))
+            except Exception:
+                pass
+
+    # Filter by prefix, deduplicate by filename
+    seen: set = set()
+    matching: List[dict] = []
+    for f in all_files:
+        if f["name"].startswith(prefix) and f["name"] not in seen:
+            seen.add(f["name"])
+            matching.append(f)
 
     def sort_key(item: dict):
         m = re.search(r"(\d{4}-\d{2}-\d{2})", item["name"])
@@ -483,7 +548,7 @@ def read_driver_master() -> Optional[pd.DataFrame]:
     # Update driver_master.csv in the shared Drive folder and changes
     # take effect on the next login attempt — no redeployment needed.
     try:
-        for item in list_drive_files():
+        for item in list_drive_files(DRIVE_FOLDER_ID):
             if item["name"].strip().lower() == "driver_master.csv":
                 buf = download_drive_file(item["id"], item["name"])
                 df = safe_read_csv(buf)

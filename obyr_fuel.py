@@ -601,10 +601,10 @@ def main():
 
     with tab3:
         s1, s2, s3 = st.columns(3)
-        for col, ok_key, src_key, file_key, lbl in [
-            (s1,"latest_petro_file","petro_source","latest_petro_file","Petro"),
-            (s2,"latest_esso_file","esso_source","latest_esso_file","Esso"),
-            (s3,"latest_irving_file","irving_source","latest_irving_file","Irving"),
+        for col, ok_key, src_key, file_key, lbl, subfolder in [
+            (s1,"latest_petro_file","petro_source","latest_petro_file","Petro","Petro/"),
+            (s2,"latest_esso_file","esso_source","latest_esso_file","Esso","Esso/"),
+            (s3,"latest_irving_file","irving_source","latest_irving_file","Irving","Irving/"),
         ]:
             ok = bool(meta.get(ok_key))
             col.markdown(f"**{lbl}** \n{'✅' if ok else '⚠️'} {meta.get(src_key) or 'not found'}\n`{Path(meta[file_key]).name if ok else 'N/A'}`")
