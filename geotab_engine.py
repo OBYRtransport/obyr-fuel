@@ -372,10 +372,35 @@ def get_driver_assignments(device_ids: List[str]) -> Dict[str, str]:
 
 
 # ---------------------------------------------------------------------------
-# Main fleet snapshot builder
+# Main fleet snapshot builder  — rate-limited to one Geotab call per 5 min
 # ---------------------------------------------------------------------------
 
-def get_fleet_snapshot() -> pd.DataFrame:
+import time as _time
+_FLEET_CACHE: dict = {"data": None, "fetched_at": 0.0}
+FLEET_CACHE_TTL = 300  # seconds — 5 minutes
+
+
+def get_fleet_snapshot(force: bool = False) -> pd.DataFrame:
+    """
+    Returns fleet data cached for up to 5 minutes.
+    Geotab is only contacted when:
+      - Cache is empty (first load)
+      - Cache is older than 5 minutes
+      - force=True (explicit admin refresh button)
+    This prevents Streamlit reruns from hammering the Geotab API.
+    """
+    global _FLEET_CACHE
+    age = _time.time() - _FLEET_CACHE["fetched_at"]
+    if not force and _FLEET_CACHE["data"] is not None and age < FLEET_CACHE_TTL:
+        return _FLEET_CACHE["data"]
+
+    result = _get_fleet_snapshot_live()
+    _FLEET_CACHE["data"] = result
+    _FLEET_CACHE["fetched_at"] = _time.time()
+    return result
+
+
+def _get_fleet_snapshot_live() -> pd.DataFrame:
     """
     Return a DataFrame with one row per active truck in FLEET_REGISTRY.
 

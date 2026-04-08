@@ -654,29 +654,28 @@ def _render_fleet():
         st.error("Geotab credentials missing — add GEOTAB_USERNAME, GEOTAB_PASSWORD, GEOTAB_DATABASE in Render environment variables.")
         return
 
-    # ── Refresh control ───────────────────────────────────────────────────────
+    # ── Refresh control — manual only, no automatic API calls on rerun ─────────
+    from geotab_engine import _FLEET_CACHE, FLEET_CACHE_TTL
+    import time as _time
+
+    fetched_at   = _FLEET_CACHE.get("fetched_at", 0.0)
+    age_secs     = _time.time() - fetched_at
+    next_refresh = max(0, int(FLEET_CACHE_TTL - age_secs))
+    last_str     = (datetime.fromtimestamp(fetched_at).strftime("%Y-%m-%d %H:%M:%S")
+                    if fetched_at > 0 else "Not loaded yet")
+
     col_refresh, col_ts = st.columns([1, 3])
     with col_refresh:
-        if st.button("🔄 Refresh fleet data", use_container_width=True):
-            st.cache_data.clear()
+        force = st.button("🔄 Refresh fleet data", use_container_width=True)
     with col_ts:
-        st.caption(f"Last loaded: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        st.caption(
+            f"Geotab last queried: **{last_str}** · "
+            f"Next earliest refresh in: **{next_refresh}s** · "
+            f"Data refreshes at most once every 5 minutes to protect the Geotab account."
+        )
 
-    # ── Debug: show raw Geotab device names ──────────────────────────────────
-    with st.expander("🔧 Debug — raw Geotab device names (use this to verify unit name matching)"):
-        try:
-            from geotab_engine import get_raw_device_names
-            raw_devices = get_raw_device_names()
-            if raw_devices:
-                st.dataframe(pd.DataFrame(raw_devices), hide_index=True, use_container_width=True)
-                st.caption("These are the exact names Geotab uses for your vehicles. Unit matching looks for your unit numbers (017, 019 etc.) anywhere inside the Name field.")
-            else:
-                st.warning("No devices returned from Geotab.")
-        except Exception as e:
-            st.error(f"Debug error: {e}")
-
-    with st.spinner("Pulling live fleet data from Geotab…"):
-        fleet = get_fleet_snapshot()
+    with st.spinner("Loading fleet data…"):
+        fleet = get_fleet_snapshot(force=force)
 
     if fleet.empty:
         st.warning("No fleet data returned. Geotab may not have matched any device names to your unit numbers (017, 019, 020, 024, 025, 027, 028). Check device names in MyGeotab.")
