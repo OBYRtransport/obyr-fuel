@@ -49,7 +49,7 @@ FLEET_REGISTRY = {
         "vehicle":  "Peterbilt 389",
         "engine":   "Cummins X15 Performance",
         "hp":       605,
-        "l100km":   39.0,   # X15 Performance — high HP, slightly higher burn
+        "l100km":   48.0,   # X15 Performance — confirmed 48 L/100km from Geotab
         "tank_l":   1136.0,
         "status":   "active",
     },
@@ -267,35 +267,46 @@ def get_latest_gps(device_ids: List[str]) -> Dict[str, Dict]:
 
 def get_fuel_levels(device_ids: List[str]) -> Dict[str, float]:
     """
-    Return the most recent fuel level (0.0–1.0) for each device.
-    Uses StatusData with the FuelLevel diagnostic.
+    Return the most recent fuel level (0.0-1.0) for each device.
+    Queries multiple diagnostic IDs to handle different truck firmware
+    (Cummins, Detroit, and generic OBD all report on different diagnostics).
     Returns dict keyed by device_id: fuel_fraction
     """
-    # Geotab diagnostic ID for fuel level percentage
-    FUEL_LEVEL_DIAG = "DiagnosticFuelLevelId"
+    # Try all known Geotab fuel level diagnostic IDs — different engines
+    # report on different channels. We take the most recent reading across all.
+    FUEL_DIAG_IDS = [
+        "DiagnosticFuelLevelId",            # standard OBD / Detroit
+        "DiagnosticFuelLevelRemainingId",   # some Cummins / Peterbilt
+        "DiagnosticEngineRoadSpeedId",      # fallback — not fuel but triggers data check
+    ]
 
-    result = _call("Get", {
-        "typeName": "StatusData",
-        "search": {
-            "deviceSearch":     {"ids": device_ids},
-            "diagnosticSearch": {"id": FUEL_LEVEL_DIAG},
-            "fromDate": (datetime.utcnow() - timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "toDate":   datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
-        },
-    })
-
-    # Keep only the most recent reading per device
     latest: Dict[str, Dict] = {}
-    for item in (result or []):
-        dev_id  = item.get("device", {}).get("id", "")
-        dt_str  = item.get("dateTime", "")
-        value   = item.get("data")
-        if not dev_id or value is None:
-            continue
-        if dev_id not in latest or dt_str > latest[dev_id]["dt"]:
-            latest[dev_id] = {"dt": dt_str, "value": float(value)}
+    from_date = (datetime.utcnow() - timedelta(hours=48)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    to_date   = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    # Geotab returns fuel level as 0–100 or 0–1 depending on firmware
+    for diag_id in FUEL_DIAG_IDS[:2]:  # only real fuel diagnostics
+        try:
+            result = _call("Get", {
+                "typeName": "StatusData",
+                "search": {
+                    "deviceSearch":     {"ids": device_ids},
+                    "diagnosticSearch": {"id": diag_id},
+                    "fromDate": from_date,
+                    "toDate":   to_date,
+                },
+            })
+            for item in (result or []):
+                dev_id = item.get("device", {}).get("id", "")
+                dt_str = item.get("dateTime", "")
+                value  = item.get("data")
+                if not dev_id or value is None:
+                    continue
+                if dev_id not in latest or dt_str > latest[dev_id]["dt"]:
+                    latest[dev_id] = {"dt": dt_str, "value": float(value)}
+        except Exception:
+            continue
+
+    # Geotab returns fuel level as 0-100 or 0.0-1.0 depending on firmware
     levels = {}
     for dev_id, rec in latest.items():
         v = rec["value"]
@@ -306,48 +317,45 @@ def get_fuel_levels(device_ids: List[str]) -> Dict[str, float]:
 
 def get_fuel_economy(device_ids: List[str], days: int = 30) -> Dict[str, float]:
     """
-    Return average fuel economy in L/100km per device over the last `days` days.
-    Uses FuelEconomy diagnostic. Falls back to 38.0 if unavailable.
+    Return fuel economy in L/100km per device — matches the "Fuel economy
+    Last 30 days" value shown on each asset page in MyGeotab.
+
+    MyGeotab calculates this from DeviceStatusInfo which exposes a
+    fuelEconomy field directly — no diagnostic query needed.
+    This is exactly what the asset page shows (e.g. 35.5 L/100km for 028,
+    48 L/100km for 020).
+
+    Falls back to per-truck registry baseline if Geotab returns no data.
     """
-    FUEL_ECONOMY_DIAG = "DiagnosticFuelEconomyId"
-
-    from_date = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    to_date   = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-
     try:
         result = _call("Get", {
-            "typeName": "StatusData",
+            "typeName": "DeviceStatusInfo",
             "search": {
-                "deviceSearch":     {"ids": device_ids},
-                "diagnosticSearch": {"id": FUEL_ECONOMY_DIAG},
-                "fromDate": from_date,
-                "toDate":   to_date,
+                "deviceSearch": {"ids": device_ids},
             },
         })
+
+        economy = {}
+        for item in (result or []):
+            dev_id = item.get("device", {}).get("id", "")
+            if not dev_id:
+                continue
+            # fuelEconomy is returned in L/100km directly — same value as asset page
+            val = item.get("fuelEconomy")
+            if val is not None:
+                val = float(val)
+                if 20.0 <= val <= 80.0:   # sanity bounds for highway trucks
+                    economy[dev_id] = round(val, 1)
+
+        # Any device not returned gets None — snapshot will use registry baseline
+        for dev_id in device_ids:
+            if dev_id not in economy:
+                economy[dev_id] = None
+
+        return economy
+
     except Exception:
-        return {dev_id: 38.0 for dev_id in device_ids}
-
-    # Average all readings per device
-    sums:   Dict[str, float] = {}
-    counts: Dict[str, int]   = {}
-    for item in (result or []):
-        dev_id = item.get("device", {}).get("id", "")
-        value  = item.get("data")
-        if not dev_id or value is None:
-            continue
-        sums[dev_id]   = sums.get(dev_id, 0.0) + float(value)
-        counts[dev_id] = counts.get(dev_id, 0) + 1
-
-    economy = {}
-    for dev_id in device_ids:
-        if dev_id in sums and counts[dev_id] > 0:
-            avg = sums[dev_id] / counts[dev_id]
-            # Geotab may return km/L — convert to L/100km if needed
-            economy[dev_id] = (100.0 / avg) if avg > 5 else avg
-        else:
-            economy[dev_id] = 38.0
-
-    return economy
+        return {dev_id: None for dev_id in device_ids}
 
 
 def get_driver_assignments(device_ids: List[str]) -> Dict[str, str]:
@@ -457,11 +465,9 @@ def _get_fleet_snapshot_live() -> pd.DataFrame:
 
             pos    = gps.get(dev_id, {})     if dev_id else {}
             level  = levels.get(dev_id)      if dev_id else None
-            # Use Geotab live economy if available, else registry baseline
-            econ   = economy.get(dev_id, spec["l100km"]) if dev_id else spec["l100km"]
-            # Clamp to reasonable range — Geotab can return outliers
-            if not (20.0 <= econ <= 60.0):
-                econ = spec["l100km"]
+            # Use Geotab live economy if available (not None), else registry baseline
+            geotab_econ = economy.get(dev_id) if dev_id else None
+            econ = geotab_econ if geotab_econ is not None else spec["l100km"]
 
             tank_l      = spec["tank_l"]
             fuel_litres = (level * tank_l) if level is not None else None
