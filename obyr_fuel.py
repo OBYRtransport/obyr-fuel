@@ -26,10 +26,13 @@ from fuel_engine import (
     NETWORK_COLOURS,
     authenticate_driver,
     get_driver_full_name,
+    get_driver_role,
     build_price_table,
     get_base_dir,
     get_route_polyline,
     price_staleness_days,
+    log_event,
+    read_analytics,
 )
 
 try:
@@ -97,6 +100,7 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 def _init_session():
     defaults = {
         "logged_in": False, "driver_name": "", "driver_full_name": "",
+        "driver_role": "driver",
         "current_lat": DEFAULT_YARD["lat"], "current_lon": DEFAULT_YARD["lon"],
         "current_label": DEFAULT_YARD["label"],
         "dest_lat": None, "dest_lon": None, "dest_label": "",
@@ -314,6 +318,12 @@ def do_login():
                 st.session_state.logged_in = True
                 st.session_state.driver_name = str(username).strip()
                 st.session_state.driver_full_name = get_driver_full_name(username)
+                st.session_state.driver_role = get_driver_role(username)
+                log_event(
+                    username=str(username).strip(),
+                    full_name=st.session_state.driver_full_name,
+                    event="login",
+                )
                 st.rerun()
             else:
                 time.sleep(0.6)
@@ -469,6 +479,21 @@ def main():
 
     prices_df, meta = _cached_price_table(clat, clon, dlat, dlon, network, max_km, buf, det)
 
+    # Log a search once per unique combination (session-keyed so it doesn't
+    # fire on every Streamlit rerun, only when the inputs actually change)
+    _log_key = f"_logged_{clat}_{clon}_{dlat}_{dlon}_{network}"
+    if _log_key not in st.session_state:
+        st.session_state[_log_key] = True
+        log_event(
+            username=st.session_state.driver_name,
+            full_name=st.session_state.get("driver_full_name", ""),
+            event="search",
+            origin_label=clab,
+            dest_label=dlab if dlat else "",
+            network=network,
+            route_km=meta.get("route_distance_km", 0.0),
+        )
+
     # Fix 3: one polyline fetch, reused everywhere
     polyline_pts  = None
     route_dist_km = 0.0
@@ -515,7 +540,13 @@ def main():
         st.warning("No stations found. Try widening corridor buffer, increasing radius, or changing network.")
         return
 
-    tab1, tab2, tab3 = st.tabs(["📋 Ranked Table", "🗺️ Map", "🔧 Data Status"])
+    is_admin = st.session_state.get("driver_role") == "admin"
+
+    if is_admin:
+        tab1, tab2, tab3, tab4 = st.tabs(["📋 Ranked Table", "🗺️ Map", "🔧 Data Status", "📊 Analytics"])
+    else:
+        tab1, tab2, tab3 = st.tabs(["📋 Ranked Table", "🗺️ Map", "🔧 Data Status"])
+        tab4 = None
 
     with tab1:
         cols = ["Station_Name","Province","Network","Address",
@@ -585,9 +616,195 @@ def main():
             with st.expander(f"⚠️ {len(unmatched)} unmatched stations"):
                 st.dataframe(unmatched, hide_index=True, use_container_width=True)
 
+    if tab4 is not None:
+        with tab4:
+            _render_admin_analytics()
+
     st.markdown(
         f"<div class='footer'>© {datetime.now().year} OBYR Transportation Group Ltd. · OBYR Fuel</div>",
         unsafe_allow_html=True,
+    )
+
+
+def _render_admin_analytics():
+    """Full utilisation dashboard — only reachable when driver_role == 'admin'."""
+    from datetime import timedelta
+
+    st.markdown("## 📊 OBYR Fuel — Utilisation Dashboard")
+    st.caption("Every login and search is recorded automatically. Refreshes on each page load.")
+
+    log = read_analytics()
+
+    if log.empty:
+        st.info("No activity recorded yet. This dashboard will populate as drivers log in and run searches.")
+        return
+
+    # ── time window ──────────────────────────────────────────────────────────
+    window = st.radio(
+        "Time window",
+        ["Last 7 days", "Last 30 days", "Last 90 days", "All time"],
+        index=1, horizontal=True, key="adm_window",
+    )
+    days_back = {"Last 7 days": 7, "Last 30 days": 30, "Last 90 days": 90, "All time": None}[window]
+    if days_back:
+        view = log[log["timestamp"] >= pd.Timestamp.now() - timedelta(days=days_back)].copy()
+    else:
+        view = log.copy()
+
+    logins   = view[view["event"] == "login"]
+    searches = view[view["event"] == "search"]
+
+    # ── KPI strip ────────────────────────────────────────────────────────────
+    st.divider()
+    k1, k2, k3, k4, k5 = st.columns(5)
+    unique_active = logins["username"].nunique()
+    k1.metric("Logins",          len(logins))
+    k2.metric("Searches",        len(searches))
+    k3.metric("Unique drivers",  unique_active)
+    k4.metric("Avg searches / driver", round(len(searches) / unique_active, 1) if unique_active else 0)
+    most_active = (
+        searches.groupby("full_name").size().idxmax()
+        if not searches.empty else "—"
+    )
+    k5.metric("Most active",     most_active)
+    st.divider()
+
+    # ── Row 1: daily chart + searches per driver ──────────────────────────────
+    col_a, col_b = st.columns(2)
+    with col_a:
+        st.markdown("#### Daily logins & searches")
+        daily_l = logins.groupby("date").size().rename("Logins")
+        daily_s = searches.groupby("date").size().rename("Searches")
+        daily = pd.concat([daily_l, daily_s], axis=1).fillna(0).astype(int)
+        daily.index = pd.to_datetime(daily.index)
+        st.bar_chart(daily.sort_index())
+
+    with col_b:
+        st.markdown("#### Searches per driver")
+        if searches.empty:
+            st.caption("No searches yet.")
+        else:
+            by_driver = (
+                searches.groupby("full_name").size()
+                .reset_index(name="Searches").rename(columns={"full_name": "Driver"})
+                .sort_values("Searches", ascending=False)
+            )
+            st.bar_chart(by_driver.set_index("Driver")["Searches"])
+
+    # ── Row 2: hour-of-day + network preference ───────────────────────────────
+    col_c, col_d = st.columns(2)
+    with col_c:
+        st.markdown("#### Hour of day (searches)")
+        if "hour" in searches.columns and not searches.empty:
+            hc = (
+                searches["hour"].value_counts()
+                .reindex(range(24), fill_value=0)
+                .sort_index()
+                .reset_index()
+            )
+            hc.columns = ["Hour", "Searches"]
+            hc["Hour"] = hc["Hour"].apply(lambda h: f"{h:02d}:00")
+            st.bar_chart(hc.set_index("Hour")["Searches"])
+        else:
+            st.caption("No data.")
+
+    with col_d:
+        st.markdown("#### Network preference")
+        if not searches.empty and "network" in searches.columns:
+            nc = (
+                searches[searches["network"].astype(str).str.strip() != ""]
+                .groupby("network").size()
+                .reset_index(name="Searches").rename(columns={"network": "Network"})
+                .sort_values("Searches", ascending=False)
+            )
+            if not nc.empty:
+                st.bar_chart(nc.set_index("Network")["Searches"])
+            else:
+                st.caption("No network data.")
+        else:
+            st.caption("No data.")
+
+    st.divider()
+
+    # ── Driver roster ─────────────────────────────────────────────────────────
+    st.markdown("#### Driver roster — activity summary")
+    login_agg  = logins.groupby("username").agg(
+        Logins=("event", "count"), Last_Login=("timestamp", "max")
+    ).reset_index()
+    search_agg = searches.groupby("username").agg(
+        Searches=("event", "count")
+    ).reset_index()
+
+    # Pull all known drivers from master so you see who has NEVER logged in
+    try:
+        dm = read_driver_master()
+        dm.columns = [c.strip() for c in dm.columns]
+        roster = dm[dm.get("Role", pd.Series(["driver"] * len(dm))) != "admin"].copy()
+        roster = roster.rename(columns={"Username": "username"})
+        roster = (
+            roster.merge(login_agg,  on="username", how="left")
+                  .merge(search_agg, on="username", how="left")
+        )
+    except Exception:
+        roster = login_agg.merge(search_agg, on="username", how="left")
+
+    roster["Logins"]   = roster["Logins"].fillna(0).astype(int)
+    roster["Searches"] = roster["Searches"].fillna(0).astype(int)
+    roster["Last Login"] = roster["Last_Login"].apply(
+        lambda t: pd.Timestamp(t).strftime("%Y-%m-%d %H:%M") if pd.notna(t) else "—  Never"
+    ) if "Last_Login" in roster.columns else "—"
+    roster["Status"] = roster.get("Last_Login", pd.Series([pd.NaT] * len(roster))).apply(
+        lambda t: "✅ Active" if pd.notna(t) else "⚠️ Never logged in"
+    )
+
+    show_cols = [c for c in ["First Name", "Last Name", "username", "Logins", "Searches", "Last Login", "Status"] if c in roster.columns]
+    st.dataframe(
+        roster[show_cols].rename(columns={"username": "E-mail", "First Name": "First", "Last Name": "Last"})
+                         .sort_values("Logins", ascending=False),
+        hide_index=True, use_container_width=True,
+    )
+
+    st.divider()
+
+    # ── Top routes ────────────────────────────────────────────────────────────
+    st.markdown("#### Top searched routes")
+    route_rows = searches[
+        searches["dest_label"].astype(str).str.strip().isin(["", "None"]) == False
+    ].copy()
+    if route_rows.empty:
+        st.caption("No corridor searches yet — all searches have been radius mode.")
+    else:
+        top_routes = (
+            route_rows.groupby(["origin_label", "dest_label"])
+            .agg(Count=("event", "count"), Avg_km=("route_km", "mean"))
+            .reset_index()
+            .rename(columns={"origin_label": "From", "dest_label": "To",
+                              "Count": "Searches", "Avg_km": "Avg Route km"})
+            .sort_values("Searches", ascending=False)
+            .head(20)
+        )
+        top_routes["Avg Route km"] = top_routes["Avg Route km"].round(0).astype("Int64")
+        st.dataframe(top_routes, hide_index=True, use_container_width=True)
+
+    # ── Raw log ───────────────────────────────────────────────────────────────
+    with st.expander("🔍 Full raw event log"):
+        raw = (
+            view[["timestamp", "full_name", "username", "event",
+                  "origin_label", "dest_label", "network", "route_km"]]
+            .rename(columns={"timestamp": "Time", "full_name": "Driver",
+                              "username": "E-mail", "event": "Event",
+                              "origin_label": "From", "dest_label": "To",
+                              "network": "Network", "route_km": "Route km"})
+            .sort_values("Time", ascending=False)
+        )
+        raw["Time"] = raw["Time"].dt.strftime("%Y-%m-%d %H:%M")
+        st.dataframe(raw, hide_index=True, use_container_width=True)
+
+    st.download_button(
+        "⬇️ Export full log (CSV)",
+        data=log.to_csv(index=False),
+        file_name=f"obyr_usage_log_{datetime.now().strftime('%Y-%m-%d')}.csv",
+        mime="text/csv",
     )
 
 

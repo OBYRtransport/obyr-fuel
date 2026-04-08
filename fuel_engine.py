@@ -479,24 +479,17 @@ def list_local_candidates(prefix: str) -> List[Path]:
 # ---------------------------------------------------------------------------
 
 def read_driver_master() -> Optional[pd.DataFrame]:
-    # Local file is authoritative — always try it first so the hashed
-    # passwords on disk take precedence over any stale Google Drive copy.
-    path = get_base_dir() / "driver_master.csv"
-    try:
-        df = pd.read_csv(path)
-        df.columns = [c.strip() for c in df.columns]
-        if not df.empty:
-            return df
-    except Exception:
-        pass
-    # Fallback: Google Drive (used only when local file is absent)
+    # Google Drive is the sole source of truth for driver credentials.
+    # Update driver_master.csv in the shared Drive folder and changes
+    # take effect on the next login attempt — no redeployment needed.
     try:
         for item in list_drive_files():
             if item["name"].strip().lower() == "driver_master.csv":
                 buf = download_drive_file(item["id"], item["name"])
                 df = safe_read_csv(buf)
                 df.columns = [c.strip() for c in df.columns]
-                return df
+                if not df.empty:
+                    return df
     except Exception:
         pass
     return None
@@ -528,6 +521,90 @@ def get_driver_full_name(username: str) -> str:
     first = str(match.iloc[0].get("First Name", "")).strip().title()
     last  = str(match.iloc[0].get("Last Name",  "")).strip().title()
     return f"{first} {last}".strip()
+
+
+def get_driver_role(username: str) -> str:
+    """Return 'admin' if the username has Role=admin in driver_master, else 'driver'."""
+    df = read_driver_master()
+    if df is None:
+        return "driver"
+    df.columns = [str(c).strip() for c in df.columns]
+    if "Role" not in df.columns:
+        return "driver"
+    match = df[df["Username"].astype(str).str.strip() == str(username).strip()]
+    if match.empty:
+        return "driver"
+    return str(match.iloc[0].get("Role", "driver")).strip().lower()
+
+
+# ---------------------------------------------------------------------------
+# Analytics — append-only usage log (usage_log.csv next to this script)
+# ---------------------------------------------------------------------------
+
+_ANALYTICS_COLS = [
+    "timestamp", "date", "hour",
+    "username", "full_name",
+    "event",                  # "login" | "search"
+    "origin_label", "dest_label", "network", "route_km",
+]
+
+
+def _analytics_path() -> Path:
+    return get_base_dir() / "usage_log.csv"
+
+
+def log_event(
+    username: str,
+    full_name: str,
+    event: str,
+    origin_label: str = "",
+    dest_label: str = "",
+    network: str = "",
+    route_km: float = 0.0,
+) -> None:
+    """Silently append one row to usage_log.csv. Never raises."""
+    now = datetime.now()
+    row = {
+        "timestamp":    now.strftime("%Y-%m-%d %H:%M:%S"),
+        "date":         now.strftime("%Y-%m-%d"),
+        "hour":         now.hour,
+        "username":     username,
+        "full_name":    full_name,
+        "event":        event,
+        "origin_label": origin_label,
+        "dest_label":   dest_label,
+        "network":      network,
+        "route_km":     round(float(route_km or 0), 1),
+    }
+    try:
+        path = _analytics_path()
+        write_header = not path.exists()
+        with open(path, "a", newline="", encoding="utf-8") as fh:
+            writer = csv.DictWriter(fh, fieldnames=_ANALYTICS_COLS)
+            if write_header:
+                writer.writeheader()
+            writer.writerow(row)
+    except Exception:
+        pass
+
+
+def read_analytics() -> pd.DataFrame:
+    """Return usage_log.csv as a DataFrame, or an empty one if it doesn't exist yet."""
+    try:
+        path = _analytics_path()
+        if path.exists():
+            df = pd.read_csv(path)
+            df.columns = [c.strip() for c in df.columns]
+            df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
+            # back-fill columns added in later versions
+            for col in _ANALYTICS_COLS:
+                if col not in df.columns:
+                    df[col] = ""
+            return df
+    except Exception:
+        pass
+    return pd.DataFrame(columns=_ANALYTICS_COLS)
+
 
 # ---------------------------------------------------------------------------
 # Master location tables
