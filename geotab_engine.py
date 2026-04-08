@@ -401,14 +401,28 @@ def get_fleet_snapshot() -> pd.DataFrame:
         economy  = get_fuel_economy(device_ids)
 
         # Build a lookup: unit_number -> geotab vehicle dict
-        # Geotab device name may be "017", "OBYR-017", "Unit 017" etc.
+        # Prefer exact name match ("017") over contains match ("OBYR-017")
+        # Also skip any device whose name starts with "do not use" or "Defect"
         unit_to_vehicle = {}
+        skip_prefixes = ("do not use", "defect", "old ")
+
+        # Pass 1: exact match
         for v in vehicles:
-            name = str(v.get("name", ""))
+            name = str(v.get("name", "")).strip()
+            if name.lower().startswith(skip_prefixes):
+                continue
             for unit in ACTIVE_UNITS:
-                if unit in name:
+                if name == unit and unit not in unit_to_vehicle:
                     unit_to_vehicle[unit] = v
-                    break
+
+        # Pass 2: contains match for any still unmatched
+        for v in vehicles:
+            name = str(v.get("name", "")).strip()
+            if name.lower().startswith(skip_prefixes):
+                continue
+            for unit in ACTIVE_UNITS:
+                if unit not in unit_to_vehicle and unit in name:
+                    unit_to_vehicle[unit] = v
 
         rows = []
         for unit in ACTIVE_UNITS:
