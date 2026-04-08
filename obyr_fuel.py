@@ -662,6 +662,19 @@ def _render_fleet():
     with col_ts:
         st.caption(f"Last loaded: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
+    # ── Debug: show raw Geotab device names ──────────────────────────────────
+    with st.expander("🔧 Debug — raw Geotab device names (use this to verify unit name matching)"):
+        try:
+            from geotab_engine import get_raw_device_names
+            raw_devices = get_raw_device_names()
+            if raw_devices:
+                st.dataframe(pd.DataFrame(raw_devices), hide_index=True, use_container_width=True)
+                st.caption("These are the exact names Geotab uses for your vehicles. Unit matching looks for your unit numbers (017, 019 etc.) anywhere inside the Name field.")
+            else:
+                st.warning("No devices returned from Geotab.")
+        except Exception as e:
+            st.error(f"Debug error: {e}")
+
     with st.spinner("Pulling live fleet data from Geotab…"):
         fleet = get_fleet_snapshot()
 

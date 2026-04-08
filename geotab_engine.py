@@ -205,21 +205,35 @@ def _call(method: str, params: dict) -> dict:
 # Fleet data fetchers
 # ---------------------------------------------------------------------------
 
+def get_raw_device_names() -> List[Dict]:
+    """
+    Debug helper — return the raw name, id, and license of every device
+    in the Geotab database so we can see exactly how vehicles are named.
+    """
+    result = _call("Get", {"typeName": "Device", "search": {}})
+    return [
+        {
+            "id":      v.get("id", ""),
+            "name":    v.get("name", ""),
+            "license": v.get("licensePlate", ""),
+            "serial":  v.get("serialNumber", ""),
+        }
+        for v in (result or [])
+    ]
+
+
 def get_vehicles() -> List[Dict]:
     """
     Return list of all active vehicles in the database.
     Each dict has: id, name, licensePlate, engineType
     """
-    result = _call("Get", {
-        "typeName": "Device",
-        "search": {"deviceType": "None"},  # all device types
-    })
+    result = _call("Get", {"typeName": "Device", "search": {}})
     vehicles = []
     for v in (result or []):
         vehicles.append({
-            "id":           v.get("id", ""),
-            "name":         v.get("name", ""),
-            "license":      v.get("licensePlate", ""),
+            "id":      v.get("id", ""),
+            "name":    v.get("name", ""),
+            "license": v.get("licensePlate", ""),
         })
     return vehicles
 
