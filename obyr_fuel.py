@@ -36,6 +36,12 @@ from fuel_engine import (
 )
 
 try:
+    from geotab_engine import get_fleet_snapshot, fuel_window, TANK_CAPACITY_L
+    GEOTAB_AVAILABLE = True
+except Exception:
+    GEOTAB_AVAILABLE = False
+
+try:
     import folium
     from streamlit_folium import st_folium
     MAP_AVAILABLE = True
@@ -546,10 +552,11 @@ def main():
     is_admin = st.session_state.get("driver_role") == "admin"
 
     if is_admin:
-        tab1, tab2, tab3, tab4 = st.tabs(["📋 Ranked Table", "🗺️ Map", "🔧 Data Status", "📊 Analytics"])
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["📋 Ranked Table", "🗺️ Map", "🔧 Data Status", "🚛 Fleet", "📊 Analytics"])
     else:
         tab1, tab2, tab3 = st.tabs(["📋 Ranked Table", "🗺️ Map", "🔧 Data Status"])
         tab4 = None
+        tab5 = None
 
     with tab1:
         cols = ["Station_Name","Province","Network","Address",
@@ -621,11 +628,208 @@ def main():
 
     if tab4 is not None:
         with tab4:
+            _render_fleet()
+
+    if tab5 is not None:
+        with tab5:
             _render_admin_analytics()
 
     st.markdown(
         f"<div class='footer'>© {datetime.now().year} OBYR Transportation Group Ltd. · OBYR Fuel</div>",
         unsafe_allow_html=True,
+    )
+
+
+def _render_fleet():
+    """Admin-only Fleet tab — live truck positions, fuel levels, and smart stop recommendations."""
+
+    st.markdown("## 🚛 Live Fleet Status")
+
+    if not GEOTAB_AVAILABLE:
+        st.error("Geotab module not loaded. Ensure geotab_engine.py is deployed and credentials are set in Render.")
+        return
+
+    creds_ok = bool(os.getenv("GEOTAB_USERNAME")) and bool(os.getenv("GEOTAB_PASSWORD"))
+    if not creds_ok:
+        st.error("Geotab credentials missing. Add GEOTAB_USERNAME and GEOTAB_PASSWORD in your Render environment variables.")
+        return
+
+    with st.spinner("Pulling live fleet data from Geotab…"):
+        fleet = get_fleet_snapshot()
+
+    if fleet.empty:
+        st.warning("No fleet data returned. Check your Geotab credentials and that vehicles are active.")
+        return
+
+    if "error" in fleet.columns:
+        st.error(f"Geotab error: {fleet['error'].iloc[0]}")
+        return
+
+    # ── KPI strip ────────────────────────────────────────────────────────────
+    total        = len(fleet)
+    low_fuel     = int((fleet["status"] == "🔴 Low Fuel").sum())
+    fuel_soon    = int((fleet["status"] == "⚠️ Fuel Soon").sum())
+    ok           = int((fleet["status"] == "✅ OK").sum())
+    avg_fuel_pct = fleet["fuel_pct"].dropna().mean()
+
+    k1, k2, k3, k4 = st.columns(4)
+    k1.metric("Total trucks",     total)
+    k2.metric("🔴 Low Fuel",      low_fuel)
+    k3.metric("⚠️ Fuel Soon",     fuel_soon)
+    k4.metric("Avg fuel level",   f"{avg_fuel_pct:.0f}%" if pd.notna(avg_fuel_pct) else "—")
+
+    st.divider()
+
+    # ── Fleet roster table ───────────────────────────────────────────────────
+    st.markdown("#### Fleet roster")
+    display_cols = ["status", "truck_name", "license", "driver",
+                    "fuel_pct", "fuel_litres", "range_km", "economy_l100km", "speed_kmh"]
+    display_cols = [c for c in display_cols if c in fleet.columns]
+    rename = {
+        "status":         "Status",
+        "truck_name":     "Truck",
+        "license":        "Plate",
+        "driver":         "Driver",
+        "fuel_pct":       "Fuel %",
+        "fuel_litres":    "Fuel (L)",
+        "range_km":       "Range km",
+        "economy_l100km": "L/100km",
+        "speed_kmh":      "Speed km/h",
+    }
+    roster_display = fleet[display_cols].rename(columns=rename)
+    st.dataframe(roster_display, hide_index=True, use_container_width=True)
+
+    st.divider()
+
+    # ── Per-truck fuel recommendation ────────────────────────────────────────
+    st.markdown("#### Fuel stop recommendation")
+    st.caption("Select a truck and destination to get a route-aware stop recommendation based on its current fuel level.")
+
+    has_gps = fleet["lat"].notna() & fleet["lon"].notna()
+    eligible = fleet[has_gps & fleet["fuel_litres"].notna()].copy()
+
+    if eligible.empty:
+        st.info("No trucks with live GPS and fuel data available right now.")
+        return
+
+    truck_options = {
+        row["truck_name"]: row
+        for _, row in eligible.iterrows()
+    }
+
+    selected_name = st.selectbox("Select truck", list(truck_options.keys()), key="fleet_truck_select")
+    truck = truck_options[selected_name]
+
+    # Destination input reuses the same Places autocomplete
+    dest_result = places_input(
+        label="Destination",
+        search_key="fleet_dest_search",
+        select_key="fleet_dest_select",
+        placeholder="e.g. Moosehead Breweries, Saint John NB",
+    )
+
+    if dest_result is None:
+        # Show truck state without recommendation
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Current fuel",  f"{truck['fuel_pct']:.0f}%  ({truck['fuel_litres']:.0f} L)")
+        c2.metric("Usable range",  f"{truck['range_km']:.0f} km" if pd.notna(truck['range_km']) else "—")
+        c3.metric("Fuel economy",  f"{truck['economy_l100km']:.1f} L/100km")
+        st.info("Enter a destination above to get a specific fuel stop recommendation for this truck.")
+        return
+
+    # We have a destination — calculate fuel window and pull price table
+    dlat = dest_result["lat"]
+    dlon = dest_result["lon"]
+    dlab = dest_result["address"]
+
+    clat = float(truck["lat"])
+    clon = float(truck["lon"])
+
+    with st.spinner("Calculating optimal fuel window…"):
+        # Get route distance
+        api_key = os.getenv("GOOGLE_DIRECTIONS_API_KEY", "").strip()
+        route_km = 0.0
+        if api_key:
+            route_result = get_route_polyline(clat, clon, dlat, dlon, api_key)
+            if route_result:
+                _, route_km = route_result
+
+        window = fuel_window(
+            current_lat=clat, current_lon=clon,
+            dest_lat=dlat, dest_lon=dlon,
+            fuel_litres=float(truck["fuel_litres"]),
+            economy_l100km=float(truck["economy_l100km"]),
+            route_km=route_km,
+        )
+
+    # Summary metrics
+    st.markdown(f"**{selected_name}** → **{dlab}**")
+    w1, w2, w3, w4 = st.columns(4)
+    w1.metric("Route distance",     f"{route_km:.0f} km" if route_km else "—")
+    w2.metric("Usable range",       f"{window['usable_range_km']:.0f} km")
+    w3.metric("Must fuel by",       f"{window['must_fuel_by_km']:.0f} km")
+    w4.metric("Will make it?",      "✅ Yes" if window["will_make_it"] else "⛽ Needs stop")
+
+    if window["will_make_it"]:
+        st.success(f"This truck can complete the full route on current fuel with reserve to spare. No stop required.")
+    else:
+        st.warning(
+            f"Truck must fuel before **{window['must_fuel_by_km']:.0f} km**. "
+            f"Optimal stop window: between **{window['optimal_from_km']:.0f} km** and "
+            f"**{window['must_fuel_by_km']:.0f} km** along the route."
+        )
+
+    # Pull corridor price table from this truck's position
+    st.markdown("#### Recommended stops along this route")
+    st.caption("Stations ranked by composite score — price savings minus detour cost — within the truck's optimal fuel window.")
+
+    with st.spinner("Loading fuel prices along route…"):
+        prices_df, meta = build_price_table(
+            current_lat=clat, current_lon=clon,
+            dest_lat=dlat, dest_lon=dlon,
+            network_choice="All",
+            corridor_buffer_km=75,
+            detour_cost_per_km=1.55,
+        )
+
+    if prices_df.empty:
+        st.warning("No stations found along this route. Try widening the corridor.")
+        return
+
+    # Filter to the truck's optimal fuel window using Km_from_Current
+    if not window["will_make_it"] and "Km_from_Current" in prices_df.columns:
+        in_window = prices_df[
+            (prices_df["Km_from_Current"] >= window["optimal_from_km"]) &
+            (prices_df["Km_from_Current"] <= window["must_fuel_by_km"])
+        ].copy()
+        if in_window.empty:
+            st.info("No stations fall exactly within the fuel window — showing full corridor instead.")
+            in_window = prices_df.copy()
+    else:
+        in_window = prices_df.copy()
+
+    cols = ["Station_Name", "Province", "Network", "Address",
+            "Km_from_Current", "All_In_Price", "Savings_per_1000L", "Detour_Extra_Km", "Composite_Score"]
+    cols = [c for c in cols if c in in_window.columns]
+    rmap = {
+        "Station_Name":     "Station",
+        "Km_from_Current":  "Km from Truck",
+        "All_In_Price":     "All-In $/L",
+        "Savings_per_1000L":"Saves / 1kL",
+        "Detour_Extra_Km":  "Detour km",
+        "Composite_Score":  "Net Value $",
+    }
+    fmt = {
+        "Km from Truck": "{:.0f}",
+        "All-In $/L":    "${:.3f}",
+        "Saves / 1kL":   "${:,.0f}",
+        "Detour km":     "{:.0f}",
+        "Net Value $":   "${:,.0f}",
+    }
+    display = in_window[cols].head(20).rename(columns=rmap)
+    st.dataframe(
+        display.style.format(fmt),
+        hide_index=True, use_container_width=True,
     )
 
 
