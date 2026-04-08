@@ -114,82 +114,10 @@ def _init_session():
         "current_label": DEFAULT_YARD["label"],
         "dest_lat": None, "dest_lon": None, "dest_label": "",
         "gps_acquired": False,
-        "theme": "System",
     }
     for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v
-
-
-def _apply_theme(theme: str) -> None:
-    """Inject CSS to force Light, Dark, or follow the OS (System).
-    Re-injected on every rerun, so it stays in sync with the radio."""
-    if theme == "Light":
-        css = """
-        <style id="obyr-theme">
-        [data-testid="stAppViewContainer"],
-        [data-testid="stMain"] { background:#ffffff !important; }
-        [data-testid="stAppViewContainer"] :is(p,span,label,h1,h2,h3,h4,li,div) {
-            color:#0f172a;
-        }
-        [data-testid="metric-container"] {
-            background:#f8fafc !important; border:1px solid #e2e8f0 !important;
-        }
-        [data-testid="metric-container"] [data-testid="stMetricValue"] { color:#0f172a !important; }
-        </style>
-        """
-    elif theme == "Dark":
-        css = """
-        <style id="obyr-theme">
-        [data-testid="stAppViewContainer"],
-        [data-testid="stMain"] { background:#0f172a !important; }
-        [data-testid="stAppViewContainer"] :is(p,span,label,h1,h2,h3,h4,li,div) {
-            color:#f1f5f9;
-        }
-        [data-testid="metric-container"] {
-            background:#1e293b !important; border:1px solid #334155 !important;
-        }
-        [data-testid="metric-container"] label { color:#94a3b8 !important; }
-        [data-testid="metric-container"] [data-testid="stMetricValue"] { color:#f1f5f9 !important; }
-        .stDataFrame, [data-testid="stDataFrame"],
-        .stDataFrame table, .stDataFrame td, .stDataFrame th {
-            background:#1e293b !important; color:#f1f5f9 !important;
-        }
-        input, textarea, select {
-            background:#1e293b !important; color:#f1f5f9 !important;
-            border-color:#334155 !important;
-        }
-        .stale-warning {
-            background:#422006 !important; color:#fbbf24 !important;
-            border-left-color:#f59e0b !important;
-        }
-        </style>
-        """
-    else:  # System — follow the device's prefers-color-scheme
-        css = """
-        <style id="obyr-theme">
-        @media (prefers-color-scheme: dark) {
-          [data-testid="stAppViewContainer"],
-          [data-testid="stMain"] { background:#0f172a !important; }
-          [data-testid="stAppViewContainer"] :is(p,span,label,h1,h2,h3,h4,li,div) {
-              color:#f1f5f9;
-          }
-          [data-testid="metric-container"] {
-              background:#1e293b !important; border:1px solid #334155 !important;
-          }
-          [data-testid="metric-container"] label { color:#94a3b8 !important; }
-          [data-testid="metric-container"] [data-testid="stMetricValue"] { color:#f1f5f9 !important; }
-          .stDataFrame table, .stDataFrame td, .stDataFrame th {
-              background:#1e293b !important; color:#f1f5f9 !important;
-          }
-          input, textarea, select {
-              background:#1e293b !important; color:#f1f5f9 !important;
-              border-color:#334155 !important;
-          }
-        }
-        </style>
-        """
-    st.markdown(css, unsafe_allow_html=True)
 
 
 @st.cache_data(ttl=300, show_spinner=False)
@@ -456,7 +384,6 @@ def _hl(col_type):
 
 def main():
     _init_session()
-    _apply_theme(st.session_state.theme)
 
     do_login()
     # Only authenticated users reach this point
@@ -486,19 +413,6 @@ def main():
             for k in list(st.session_state.keys()):
                 del st.session_state[k]
             st.rerun()
-
-        # ── Theme toggle ────────────────────────────────────────────
-        theme_choice = st.radio(
-            "Theme",
-            ["System", "Light", "Dark"],
-            index=["System", "Light", "Dark"].index(st.session_state.theme),
-            horizontal=True,
-            key="theme_radio",
-        )
-        if theme_choice != st.session_state.theme:
-            st.session_state.theme = theme_choice
-            st.rerun()
-
         st.divider()
 
         st.markdown("### 📍 Current Location")
