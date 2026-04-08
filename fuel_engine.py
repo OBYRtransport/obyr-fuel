@@ -956,14 +956,31 @@ def match_petro(petro_prices: pd.DataFrame, master_petro: pd.DataFrame) -> Tuple
 def match_esso(esso_prices: pd.DataFrame, master_esso: pd.DataFrame) -> Tuple[pd.DataFrame, Dict]:
     if esso_prices.empty:
         return pd.DataFrame(columns=_EMPTY_STATION_COLS), {"price_rows": 0, "matched_rows": 0, "unmatched_rows": 0}
+    # The master directory is the SOLE source of truth for station names, addresses,
+    # and coordinates. The price file only contributes PRICE and SITE NUMBER.
+    # Any station name/address data from the vendor price file is intentionally ignored —
+    # vendors (e.g. EPL) may send garbage values (e.g. "0") which we must never display.
     matched = esso_prices.merge(
         master_esso[["SITE NUMBER", "Station_Name", "Address", "Latitude", "Longitude", "Province", "City"]],
-        on="SITE NUMBER", how="left", suffixes=("", "_master"),
+        on="SITE NUMBER", how="left", suffixes=("_price", "_master"),
     )
-    for col in ["Station_Name", "Address", "Latitude", "Longitude", "Province", "City"]:
-        mc = f"{col}_master"
-        if mc in matched.columns:
-            matched[col] = matched[col].where(matched[col].notna(), matched[mc])
+    # Always prefer master values — fall back to price-file values only if master has no record
+    def prefer_master(master_col, price_col):
+        if master_col in matched.columns and price_col in matched.columns:
+            return matched[master_col].where(matched[master_col].notna(), matched[price_col])
+        elif master_col in matched.columns:
+            return matched[master_col]
+        elif price_col in matched.columns:
+            return matched[price_col]
+        return pd.Series([np.nan] * len(matched))
+
+    matched["Station_Name"] = prefer_master("Station_Name_master", "Station_Name_price")
+    matched["Address"]      = prefer_master("Address_master",      "Address_price")
+    matched["Province"]     = prefer_master("Province_master",     "Province_price")
+    matched["City"]         = prefer_master("City_master",         "City_price")
+    matched["Latitude"]     = prefer_master("Latitude_master",     "Latitude_price")
+    matched["Longitude"]    = prefer_master("Longitude_master",    "Longitude_price")
+
     matched["Network"] = "Esso"
     matched["Matched"] = matched["Address"].notna()
     result = pd.DataFrame({
