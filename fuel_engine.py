@@ -470,7 +470,7 @@ def _get_subfolder_id(network_name: str) -> Optional[str]:
         files = list_drive_files(DRIVE_FOLDER_ID)
         for f in files:
             if (f.get("mimeType") == "application/vnd.google-apps.folder"
-                    and f["name"].lower().startswith(key)):
+                    and f["name"].lower() == key):
                 _SUBFOLDER_ID_CACHE[key] = f["id"]
                 return f["id"]
     except Exception:
@@ -603,7 +603,7 @@ def get_driver_role(username: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Analytics — append-only usage log (usage_log.csv next to this script)
+# Analytics — append-only usage log stored in Google Drive (survives redeploys)
 # ---------------------------------------------------------------------------
 
 _ANALYTICS_COLS = [
@@ -613,9 +613,86 @@ _ANALYTICS_COLS = [
     "origin_label", "dest_label", "network", "route_km",
 ]
 
+_USAGE_LOG_FILENAME = "usage_log.csv"
 
-def _analytics_path() -> Path:
-    return get_base_dir() / "usage_log.csv"
+
+def get_drive_service_rw():
+    """Drive service with read+write scope — used only for the analytics log."""
+    if not GDRIVE_AVAILABLE:
+        raise RuntimeError("Google Drive libraries not installed")
+    raw = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON", "").strip()
+    if raw:
+        creds_dict = json.loads(raw)
+        creds = service_account.Credentials.from_service_account_info(
+            creds_dict,
+            scopes=["https://www.googleapis.com/auth/drive"],
+        )
+        return build("drive", "v3", credentials=creds, cache_discovery=False)
+    key_path = get_base_dir() / "gdrive_key.json"
+    if key_path.exists():
+        creds = service_account.Credentials.from_service_account_file(
+            str(key_path),
+            scopes=["https://www.googleapis.com/auth/drive"],
+        )
+        return build("drive", "v3", credentials=creds, cache_discovery=False)
+    raise RuntimeError("Missing Google Drive credentials")
+
+
+def _get_usage_log_file_id() -> Optional[str]:
+    """Return the Drive file ID of usage_log.csv in the root folder, or None."""
+    try:
+        for item in list_drive_files(DRIVE_FOLDER_ID):
+            if item["name"].strip().lower() == _USAGE_LOG_FILENAME:
+                return item["id"]
+    except Exception:
+        pass
+    return None
+
+
+def _download_usage_log() -> pd.DataFrame:
+    """Download usage_log.csv from Drive and return as DataFrame."""
+    try:
+        file_id = _get_usage_log_file_id()
+        if file_id:
+            buf = download_drive_file(file_id, _USAGE_LOG_FILENAME)
+            df = pd.read_csv(buf)
+            df.columns = [c.strip() for c in df.columns]
+            df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
+            for col in _ANALYTICS_COLS:
+                if col not in df.columns:
+                    df[col] = ""
+            return df
+    except Exception:
+        pass
+    return pd.DataFrame(columns=_ANALYTICS_COLS)
+
+
+def _upload_usage_log(df: pd.DataFrame) -> None:
+    """Upload the full usage_log DataFrame to Drive, overwriting the existing file."""
+    try:
+        from googleapiclient.http import MediaIoBaseUpload
+        service = get_drive_service_rw()
+        csv_bytes = df.to_csv(index=False).encode("utf-8")
+        media = MediaIoBaseUpload(
+            io.BytesIO(csv_bytes),
+            mimetype="text/csv",
+            resumable=False,
+        )
+        file_id = _get_usage_log_file_id()
+        if file_id:
+            # Update existing file
+            service.files().update(
+                fileId=file_id,
+                media_body=media,
+            ).execute()
+        else:
+            # Create new file in root folder
+            service.files().create(
+                body={"name": _USAGE_LOG_FILENAME, "parents": [DRIVE_FOLDER_ID]},
+                media_body=media,
+            ).execute()
+    except Exception:
+        pass
 
 
 def log_event(
@@ -627,9 +704,9 @@ def log_event(
     network: str = "",
     route_km: float = 0.0,
 ) -> None:
-    """Silently append one row to usage_log.csv. Never raises."""
+    """Append one row to usage_log.csv in Google Drive. Never raises."""
     now = datetime.now()
-    row = {
+    new_row = pd.DataFrame([{
         "timestamp":    now.strftime("%Y-%m-%d %H:%M:%S"),
         "date":         now.strftime("%Y-%m-%d"),
         "hour":         now.hour,
@@ -640,35 +717,18 @@ def log_event(
         "dest_label":   dest_label,
         "network":      network,
         "route_km":     round(float(route_km or 0), 1),
-    }
+    }])
     try:
-        path = _analytics_path()
-        write_header = not path.exists()
-        with open(path, "a", newline="", encoding="utf-8") as fh:
-            writer = csv.DictWriter(fh, fieldnames=_ANALYTICS_COLS)
-            if write_header:
-                writer.writeheader()
-            writer.writerow(row)
+        df = _download_usage_log()
+        df = pd.concat([df, new_row], ignore_index=True)
+        _upload_usage_log(df)
     except Exception:
         pass
 
 
 def read_analytics() -> pd.DataFrame:
-    """Return usage_log.csv as a DataFrame, or an empty one if it doesn't exist yet."""
-    try:
-        path = _analytics_path()
-        if path.exists():
-            df = pd.read_csv(path)
-            df.columns = [c.strip() for c in df.columns]
-            df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
-            # back-fill columns added in later versions
-            for col in _ANALYTICS_COLS:
-                if col not in df.columns:
-                    df[col] = ""
-            return df
-    except Exception:
-        pass
-    return pd.DataFrame(columns=_ANALYTICS_COLS)
+    """Return usage_log.csv from Google Drive as a DataFrame."""
+    return _download_usage_log()
 
 
 # ---------------------------------------------------------------------------
@@ -739,8 +799,7 @@ def _parse_petro_content(content: str) -> pd.DataFrame:
     for raw_line in lines:
         line = raw_line.rstrip()
         if not started:
-            if ("SITE NAME" in line and "PST $/L" in line) or \
-                    ("NOM DE L" in line and "TVP" in line):
+            if "SITE NAME" in line and "PST $/L" in line:
                 started = True
             continue
         if not line.strip() or line.strip().startswith("---"):
