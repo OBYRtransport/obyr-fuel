@@ -138,7 +138,7 @@ def _places_suggestions(query: str, api_key: str) -> list:
     return []
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=1800, show_spinner=False)
 def _place_coords(place_id: str, api_key: str):
     try:
         r = req.get(PLACES_DETAILS_URL, params={
@@ -212,7 +212,7 @@ def places_input(label: str, search_key: str, select_key: str, placeholder: str)
             @st.cache_resource
             def _nom():
                 return Nominatim(user_agent="obyr_fuel")
-            @st.cache_data(ttl=3600, show_spinner=False)
+            @st.cache_data(ttl=1800, show_spinner=False)
             def _geo(a):
                 try:
                     loc = _nom().geocode(a + ", Canada", timeout=5)
@@ -250,7 +250,7 @@ def places_input(label: str, search_key: str, select_key: str, placeholder: str)
         return None
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=1800, show_spinner=False)
 def _cached_polyline(clat, clon, dlat, dlon):
     if not MAPS_API_KEY:
         return None, 0.0
@@ -258,8 +258,27 @@ def _cached_polyline(clat, clon, dlat, dlon):
     return result if result else (None, 0.0)
 
 
-@st.cache_data(ttl=3600, show_spinner="Loading fuel prices…")
-def _cached_price_table(clat, clon, dlat, dlon, network, max_km, buffer_km, detour_cost):
+def _price_cache_window() -> str:
+    """
+    Returns a string key representing the current 'pricing window'.
+    Prices update once daily after 7:35am Toronto time.
+    The key changes at 7:35am each day, which busts the cache automatically —
+    no logout required. Drivers who open the app after 7:35am always get
+    today's prices, even if they never logged out.
+    """
+    import pytz
+    toronto = pytz.timezone("America/Toronto")
+    now = datetime.now(toronto)
+    # If before 7:35am, we're still in yesterday's pricing window
+    cutoff = now.replace(hour=7, minute=35, second=0, microsecond=0)
+    window_date = now.date() if now >= cutoff else (now.date() - __import__("datetime").timedelta(days=1))
+    return str(window_date)
+
+
+@st.cache_data(ttl=1800, show_spinner="Loading fuel prices…")
+def _cached_price_table(clat, clon, dlat, dlon, network, max_km, buffer_km, detour_cost, _price_window):
+    # _price_window is included in the cache key so the cache auto-busts at 7:35am daily.
+    # The leading underscore prevents Streamlit from hashing it (it's already a simple string).
     return build_price_table(
         current_lat=clat, current_lon=clon,
         dest_lat=dlat, dest_lon=dlon,
@@ -410,6 +429,8 @@ def main():
         else:
             st.success(f"👤 {email}")
         if st.button("Logout", use_container_width=True):
+            # Clear ALL cached data so the next login always pulls fresh prices from Drive
+            st.cache_data.clear()
             for k in list(st.session_state.keys()):
                 del st.session_state[k]
             st.rerun()
@@ -486,7 +507,7 @@ def main():
     dlon  = st.session_state.dest_lon
     dlab  = st.session_state.dest_label or "None"
 
-    prices_df, meta = _cached_price_table(clat, clon, dlat, dlon, network, max_km, buf, det)
+    prices_df, meta = _cached_price_table(clat, clon, dlat, dlon, network, max_km, buf, det, _price_window=_price_cache_window())
 
     # Log a search once per unique combination (session-keyed so it doesn't
     # fire on every Streamlit rerun, only when the inputs actually change)
