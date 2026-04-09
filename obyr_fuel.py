@@ -265,11 +265,30 @@ a, a:visited {{ color: var(--accent); }}
     padding: 1.5rem 0 0.5rem;
 }}
 
-/* Hide Streamlit chrome */
+/* Hide Streamlit chrome — but KEEP the header visible so the sidebar
+   expand/collapse toggle (which lives inside stHeader) stays usable. */
 [data-testid="stSkeleton"] {{ display: none !important; }}
 #MainMenu {{ visibility: hidden; }}
 footer {{ visibility: hidden; }}
-header {{ visibility: hidden; }}
+[data-testid="stHeader"] {{
+    background: transparent !important;
+    height: 3rem;
+}}
+[data-testid="stHeader"] [data-testid="stDecoration"],
+[data-testid="stHeader"] [data-testid="stStatusWidget"],
+[data-testid="stToolbar"] {{
+    visibility: hidden;
+}}
+/* Make absolutely sure the sidebar collapse/expand controls are visible */
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="collapsedControl"],
+[data-testid="stExpandSidebarButton"],
+[data-testid="stSidebarCollapseButton"] {{
+    visibility: visible !important;
+    display: flex !important;
+    opacity: 1 !important;
+    z-index: 999999 !important;
+}}
 
 /* ── Geolocation widget hide — SCOPED ───────────────────────────────
    Previously a global [data-testid=stCustomComponentV1] iframe display:none
