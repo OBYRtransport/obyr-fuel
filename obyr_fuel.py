@@ -99,36 +99,9 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 .login-heading  { font-size: 1.4rem; font-weight: 700; margin-bottom: 1rem; }
 .footer { font-size: 0.72rem; color: #94a3b8; text-align: center; padding: 1.5rem 0 0.5rem; }
 [data-testid="stSkeleton"] { display: none !important; }
-
-/* Hide Streamlit-branded chrome — but KEEP the stHeader wrapper visible
-   so the sidebar expand/collapse arrow inside it still works.
-   We target the branded *children* of the header individually.          */
-#MainMenu                             { display: none !important; }
-footer                                { display: none !important; }
-[data-testid="stToolbar"]             { display: none !important; }
-[data-testid="stDecoration"]          { display: none !important; }
-[data-testid="stStatusWidget"]        { display: none !important; }
-[data-testid="stAppDeployButton"]     { display: none !important; }
-[data-testid="manage-app-button"]     { display: none !important; }
-.stDeployButton                       { display: none !important; }
-.stAppToolbar                         { display: none !important; }
-.viewerBadge_container__1QSob         { display: none !important; }
-.styles_viewerBadge__1yB5_            { display: none !important; }
-.viewerBadge_link__1S137              { display: none !important; }
-
-/* Header wrapper: transparent and un-clickable, but NOT display:none —
-   the sidebar expand arrow lives inside it and must stay reachable.    */
-[data-testid="stHeader"] {
-    background: transparent !important;
-    height: 2rem !important;
-}
-
-/* Explicit safety net: always show the collapsed-sidebar control      */
-[data-testid="collapsedControl"],
-[data-testid="stSidebarCollapsedControl"] {
-    display: block !important;
-    visibility: visible !important;
-}
+#MainMenu { visibility: hidden; }
+footer { visibility: hidden; }
+header { visibility: hidden; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -141,131 +114,10 @@ def _init_session():
         "current_label": DEFAULT_YARD["label"],
         "dest_lat": None, "dest_lon": None, "dest_label": "",
         "gps_acquired": False,
-        "theme": "System",
     }
     for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v
-
-
-def _apply_theme(theme: str) -> None:
-    """Inject CSS to force Light, Dark, or follow the OS (System).
-    Injected on every rerun so the radio stays in sync.
-    Only affects the main content area — sidebar keeps its own dark styling."""
-
-    light_vars = """
-        --obyr-bg:           #ffffff;
-        --obyr-text:         #0f172a;
-        --obyr-muted:        #64748b;
-        --obyr-card-bg:      #f8fafc;
-        --obyr-card-border:  #e2e8f0;
-        --obyr-input-bg:     #ffffff;
-        --obyr-input-text:   #0f172a;
-        --obyr-input-border: #cbd5e1;
-        --obyr-table-bg:     #ffffff;
-        --obyr-warn-bg:      #fef3c7;
-        --obyr-warn-text:    #92400e;
-        --obyr-warn-border:  #f59e0b;
-    """
-    dark_vars = """
-        --obyr-bg:           #0f172a;
-        --obyr-text:         #f1f5f9;
-        --obyr-muted:        #94a3b8;
-        --obyr-card-bg:      #1e293b;
-        --obyr-card-border:  #334155;
-        --obyr-input-bg:     #1e293b;
-        --obyr-input-text:   #f1f5f9;
-        --obyr-input-border: #334155;
-        --obyr-table-bg:     #1e293b;
-        --obyr-warn-bg:      #78350f;
-        --obyr-warn-text:    #fde68a;
-        --obyr-warn-border:  #f59e0b;
-    """
-
-    common_rules = """
-    /* Background — high-specificity selectors to beat Streamlit defaults.
-       .stApp is the outermost container; setting it cascades down.         */
-    .stApp,
-    [data-testid="stAppViewContainer"],
-    section[data-testid="stMain"],
-    [data-testid="stAppViewBlockContainer"] {
-        background: var(--obyr-bg) !important;
-        background-color: var(--obyr-bg) !important;
-    }
-
-    /* Main-area text — scoped to markdown containers ONLY, so the
-       stale-warning (which is also inside a markdown container but has
-       its own colour class) can be re-overridden below.                    */
-    section[data-testid="stMain"] [data-testid="stMarkdownContainer"] p,
-    section[data-testid="stMain"] [data-testid="stMarkdownContainer"] span,
-    section[data-testid="stMain"] [data-testid="stMarkdownContainer"] h1,
-    section[data-testid="stMain"] [data-testid="stMarkdownContainer"] h2,
-    section[data-testid="stMain"] [data-testid="stMarkdownContainer"] h3,
-    section[data-testid="stMain"] [data-testid="stMarkdownContainer"] h4,
-    section[data-testid="stMain"] [data-testid="stMarkdownContainer"] li,
-    section[data-testid="stMain"] [data-testid="stMarkdownContainer"] strong,
-    section[data-testid="stMain"] [data-testid="stMarkdownContainer"] em {
-        color: var(--obyr-text) !important;
-    }
-
-    /* Metric cards ------------------------------------------------------ */
-    section[data-testid="stMain"] [data-testid="metric-container"] {
-        background: var(--obyr-card-bg) !important;
-        border: 1px solid var(--obyr-card-border) !important;
-    }
-    section[data-testid="stMain"] [data-testid="stMetricLabel"],
-    section[data-testid="stMain"] [data-testid="metric-container"] label {
-        color: var(--obyr-muted) !important;
-    }
-    section[data-testid="stMain"] [data-testid="stMetricValue"] {
-        color: var(--obyr-text) !important;
-    }
-
-    /* Tabs -------------------------------------------------------------- */
-    section[data-testid="stMain"] [data-baseweb="tab"] {
-        color: var(--obyr-text) !important;
-    }
-
-    /* Form controls ----------------------------------------------------- */
-    section[data-testid="stMain"] input,
-    section[data-testid="stMain"] textarea,
-    section[data-testid="stMain"] select {
-        background: var(--obyr-input-bg) !important;
-        color: var(--obyr-input-text) !important;
-        border-color: var(--obyr-input-border) !important;
-    }
-
-    /* Stale-price warning — re-asserted LAST so it wins over the
-       markdown text-colour rule above. Covers the wrapper div and
-       any children (text, <b> tags, etc).                                 */
-    section[data-testid="stMain"] .stale-warning {
-        background: var(--obyr-warn-bg) !important;
-        border-left-color: var(--obyr-warn-border) !important;
-    }
-    section[data-testid="stMain"] .stale-warning,
-    section[data-testid="stMain"] .stale-warning *,
-    section[data-testid="stMain"] .stale-warning b,
-    section[data-testid="stMain"] .stale-warning strong {
-        color: var(--obyr-warn-text) !important;
-    }
-    """
-
-    if theme == "Light":
-        css = f"<style id='obyr-theme'>:root {{ {light_vars} }} {common_rules}</style>"
-    elif theme == "Dark":
-        css = f"<style id='obyr-theme'>:root {{ {dark_vars} }} {common_rules}</style>"
-    else:  # System — follow the device's prefers-color-scheme
-        css = f"""
-        <style id='obyr-theme'>
-        :root {{ {light_vars} }}
-        @media (prefers-color-scheme: dark) {{
-            :root {{ {dark_vars} }}
-        }}
-        {common_rules}
-        </style>
-        """
-
-    st.markdown(css, unsafe_allow_html=True)
 
 
 @st.cache_data(ttl=300, show_spinner=False)
@@ -468,20 +320,6 @@ def do_login():
             password = st.text_input("Password", type="password", key="login_pass")
             submitted = st.form_submit_button("Login", type="primary",
                                               use_container_width=True)
-
-        # Theme toggle on login page — carries over after sign-in
-        login_theme = st.radio(
-            "Theme",
-            ["System", "Light", "Dark"],
-            index=["System", "Light", "Dark"].index(st.session_state.theme),
-            horizontal=True,
-            key="login_theme_radio",
-            label_visibility="collapsed",
-        )
-        if login_theme != st.session_state.theme:
-            st.session_state.theme = login_theme
-            st.rerun()
-
         if submitted:
             if not username or not password:
                 st.error("Please enter your e-mail and password.")
@@ -546,7 +384,6 @@ def _hl(col_type):
 
 def main():
     _init_session()
-    _apply_theme(st.session_state.theme)
 
     do_login()
     # Only authenticated users reach this point
@@ -576,19 +413,6 @@ def main():
             for k in list(st.session_state.keys()):
                 del st.session_state[k]
             st.rerun()
-
-        # ── Theme toggle ────────────────────────────────────────────
-        sidebar_theme = st.radio(
-            "Theme",
-            ["System", "Light", "Dark"],
-            index=["System", "Light", "Dark"].index(st.session_state.theme),
-            horizontal=True,
-            key="sidebar_theme_radio",
-        )
-        if sidebar_theme != st.session_state.theme:
-            st.session_state.theme = sidebar_theme
-            st.rerun()
-
         st.divider()
 
         st.markdown("### 📍 Current Location")
