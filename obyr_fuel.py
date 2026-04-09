@@ -1,20 +1,14 @@
 """
 OBYR Fuel — Streamlit UI
-
-V7.2:
-  1. White box on login — GPS widget only mounts post-login, skeleton hidden.
-  2. Address entry — server-side Google Places Autocomplete via text_input +
-     selectbox fallback. No iframes, no JS postMessage, no crashes.
+Fixes from V7.2:
+  1. White box on login — GPS widget only mounts post-login, skeleton hidden
+  2. Address entry — server-side Google Places Autocomplete. User types into
+     a standard Streamlit text_input, Python calls Places API and returns
+     suggestions as a selectbox. No iframes, no JS postMessage, no crashes.
   3. Duplicate Google Directions API call eliminated — polyline cached once
      and reused by map tab.
-  4. Streamlit deprecation warnings fixed — skeletons and GPS crash resolved.
-
-V7.3:
-  1. GPS widget moved inside with st.sidebar: — never fires on login page.
-  2. price_window underscore removed — Streamlit silently skips _-prefixed
-     params as cache keys; 15-minute price cache was never busting.
-  3. Admin tabs built before empty-data guard — Fleet + Analytics tabs were
-     disappearing whenever the price table returned empty.
+  4. Streamlit deprecation warnings fixed — use_container_width stays but
+     skeletons and GPS crash are resolved.
 """
 from __future__ import annotations
 
@@ -282,8 +276,8 @@ def _price_cache_window() -> str:
 
 
 @st.cache_data(ttl=900, show_spinner="Loading fuel prices…")
-def _cached_price_table(clat, clon, dlat, dlon, network, max_km, buffer_km, detour_cost, price_window):
-    # price_window changes every 15 minutes, automatically busting the cache.
+def _cached_price_table(clat, clon, dlat, dlon, network, max_km, buffer_km, detour_cost, _price_window):
+    # _price_window changes every 15 minutes, automatically busting the cache.
     return build_price_table(
         current_lat=clat, current_lon=clon,
         dest_lat=dlat, dest_lon=dlon,
@@ -412,14 +406,14 @@ def main():
     do_login()
     # Only authenticated users reach this point
 
-    with st.sidebar:
-        gps_data = None
-        try:
-            from streamlit_geolocation import streamlit_geolocation
-            gps_data = streamlit_geolocation()
-        except Exception:
-            pass
+    gps_data = None
+    try:
+        from streamlit_geolocation import streamlit_geolocation
+        gps_data = streamlit_geolocation()
+    except Exception:
+        pass
 
+    with st.sidebar:
         st.markdown("## ⛽ OBYR Fuel")
         full_name = st.session_state.get("driver_full_name", "")
         email     = st.session_state.driver_name
@@ -512,7 +506,7 @@ def main():
     dlon  = st.session_state.dest_lon
     dlab  = st.session_state.dest_label or "None"
 
-    prices_df, meta = _cached_price_table(clat, clon, dlat, dlon, network, max_km, buf, det, price_window=_price_cache_window())
+    prices_df, meta = _cached_price_table(clat, clon, dlat, dlon, network, max_km, buf, det, _price_window=_price_cache_window())
 
     # Log a search once per unique combination (session-keyed so it doesn't
     # fire on every Streamlit rerun, only when the inputs actually change)
@@ -571,6 +565,10 @@ def main():
     c4.metric("Stations shown", f"{meta['display_rows']}")
     st.divider()
 
+    if prices_df.empty:
+        st.warning("No stations found. Try widening corridor buffer, increasing radius, or changing network.")
+        return
+
     is_admin = st.session_state.get("driver_role") == "admin"
 
     if is_admin:
@@ -581,8 +579,6 @@ def main():
         tab5 = None
 
     with tab1:
-        if prices_df.empty:
-            st.warning("No stations found. Try widening corridor buffer, increasing radius, or changing network.")
         cols = ["Station_Name","Province","Network","Address",
                 "Km_from_Current","Km_from_Destination","Km_from_Yard","All_In_Price","Savings_per_1000L"]
         rmap = {"Station_Name":"Station","Km_from_Current":"Km (Current)",
