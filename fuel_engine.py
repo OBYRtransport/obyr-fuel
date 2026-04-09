@@ -2,14 +2,14 @@
 OBYR Fuel Engine — Production
 
 V7.3:
-  1. Subfolder name match changed to startswith — finds "Petro Shared folder",
-     "Esso Shared folder", "Irving Shared folder" after Drive reorganisation.
-  2. Petro parser handles French header (NOM DE L'ETABLISSEMENT / TVP) so
-     French-format price files are parsed correctly.
+  1. Subfolder name match changed to startswith — finds "Petro Shared folder" etc.
+  2. Petro parser rewritten to be completely format-agnostic — no trigger line,
+     works with English/French headers, comma or tab delimiters, any encoding.
+  3. _SUBFOLDER_ID_CACHE removed — always queries Drive fresh.
 
 V7.4:
-  1. Analytics log (usage_log.csv) now written to Google Drive instead of
-     Render local disk — survives redeploys permanently.
+  1. Analytics log written to Google Drive instead of Render local disk —
+     usage_log.csv now survives redeploys permanently.
 """
 from __future__ import annotations
 
@@ -467,7 +467,7 @@ def download_drive_file(file_id: str, filename: str) -> io.BytesIO:
 
 def _get_subfolder_id(network_name: str) -> Optional[str]:
     """Return the Drive folder ID for Petro/Esso/Irving subfolder.
-    Always queries Drive fresh — no process-level cache that survives deploys.
+    Always queries Drive fresh — no process-level cache that persists across deploys.
     """
     key = network_name.lower()
     try:
@@ -796,50 +796,67 @@ def read_irving_master() -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 
 def _parse_petro_content(content: str) -> pd.DataFrame:
-    lines = content.splitlines()
+    """
+    Format-agnostic Petro-Pass price parser.
+    Works with English or French headers, comma or tab delimiters.
+    No trigger line needed — collects any line whose second field is a
+    valid 2-letter Canadian province code and third field is a valid price.
+    """
+    CANADIAN_PROV = {
+        "NL","NS","NB","QC","ON","MB","SK","AB","BC","YT","NT","NU","PE"
+    }
+    JUNK_STARTS = ("ACCOUNT","PRODUCT","REGION","AS OF","PAGE","DUE TO",
+                   "SITE NAME","NOM DE","PRIX","PRICE","TVP","PST",
+                   "COMPTE","COMPTE NO","PRODUIT","---","===")
+
     records = []
-    started = False
-    for raw_line in lines:
-        line = raw_line.rstrip()
-        if not started:
-            if "SITE NAME" in line and "PST $/L" in line:
-                started = True
+    for raw_line in content.splitlines():
+        line = raw_line.strip()
+        if not line:
             continue
-        if not line.strip() or line.strip().startswith("---"):
-            continue
+
+        # Auto-detect delimiter
         sep = "\t" if "\t" in line else ","
-        parts = [p.rstrip() for p in line.split(sep)]
-        station = province = price = None
-        if len(parts) >= 3:
-            p0, p1, p2 = parts[0].strip(), parts[1].strip().upper(), parts[2].strip()
-            if re.fullmatch(r"[A-Z]{2}", p1):
-                station, province, price = p0, p1, p2
-        if station is None and len(parts) >= 3:
-            m = re.match(r"^(?P<station>.+?)\s{2,}(?P<prov>[A-Z]{2})\s*$", parts[0].strip())
-            if m:
-                station, province, price = m.group("station").strip(), m.group("prov").strip(), parts[2].strip()
-        if station is None and len(parts) >= 3:
-            m = re.match(r"^(?P<station>.+?)\s+(?P<prov>[A-Z]{2})$", parts[0].strip())
-            if m and parts[1].strip() == "":
-                station, province, price = m.group("station").strip(), m.group("prov").strip(), parts[2].strip()
-        if station is None and len(parts) >= 3:
-            p0, p2 = parts[0].strip(), parts[2].strip()
-            if p0 and re.fullmatch(r"\d+\.\d{4}", p2):
-                station, province, price = p0, "", p2
-        if not station:
+        parts = [p.strip() for p in line.split(sep)]
+
+        # Need at least 3 fields: station, province, price
+        if len(parts) < 3:
             continue
-        junk = ("ACCOUNT", "PRODUCT", "REGION", "AS OF", "PAGE", "DUE TO OCCASIONAL")
-        if station.upper().startswith(junk):
+
+        station = parts[0].strip()
+        province = parts[1].strip().upper()
+        price_str = parts[2].strip()
+
+        # Skip header/junk lines
+        if not station or station.upper().startswith(JUNK_STARTS):
             continue
-        records.append({"Station_Name": station.strip(), "Province": str(province or "").strip().upper(), "Price": price})
+
+        # Province must be a valid 2-letter Canadian code
+        if not re.fullmatch(r"[A-Z]{2}", province):
+            continue
+        if province not in CANADIAN_PROV:
+            continue
+
+        # Price must look like a number
+        price_clean = re.sub(r"[^0-9.\-]", "", price_str)
+        if not price_clean:
+            continue
+        try:
+            float(price_clean)
+        except ValueError:
+            continue
+
+        records.append({
+            "Station_Name": station,
+            "Province": province,
+            "Price": price_str,
+        })
+
     df = pd.DataFrame(records)
     if df.empty:
         return df
     df["Price"] = clean_price(df["Price"])
     df = df.dropna(subset=["Price"]).copy()
-    df["Province"] = df["Province"].replace(
-        {"B": "BC", "A": "AB", "M": "MB", "N": "NB", "S": "SK", "Q": "QC", "Y": "YT"}
-    )
     df["match_name"] = df["Station_Name"].map(normalize_text)
     df["match_key"] = df["match_name"] + "|" + df["Province"]
     return df.reset_index(drop=True)
