@@ -465,21 +465,16 @@ def download_drive_file(file_id: str, filename: str) -> io.BytesIO:
     return fh
 
 
-# Cache subfolder IDs so we only look them up once per process
-_SUBFOLDER_ID_CACHE: Dict[str, str] = {}
-
-
 def _get_subfolder_id(network_name: str) -> Optional[str]:
-    """Return the Drive folder ID for Petro/Esso/Irving subfolder, cached."""
+    """Return the Drive folder ID for Petro/Esso/Irving subfolder.
+    Always queries Drive fresh — no process-level cache that survives deploys.
+    """
     key = network_name.lower()
-    if key in _SUBFOLDER_ID_CACHE:
-        return _SUBFOLDER_ID_CACHE[key]
     try:
         files = list_drive_files(DRIVE_FOLDER_ID)
         for f in files:
             if (f.get("mimeType") == "application/vnd.google-apps.folder"
                     and f["name"].lower().startswith(key)):
-                _SUBFOLDER_ID_CACHE[key] = f["id"]
                 return f["id"]
     except Exception:
         pass
