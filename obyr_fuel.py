@@ -1,14 +1,20 @@
 """
 OBYR Fuel — Streamlit UI
-Fixes from V7.2:
-  1. White box on login — GPS widget only mounts post-login, skeleton hidden
-  2. Address entry — server-side Google Places Autocomplete. User types into
-     a standard Streamlit text_input, Python calls Places API and returns
-     suggestions as a selectbox. No iframes, no JS postMessage, no crashes.
+
+V7.2:
+  1. White box on login — GPS widget only mounts post-login, skeleton hidden.
+  2. Address entry — server-side Google Places Autocomplete via text_input +
+     selectbox fallback. No iframes, no JS postMessage, no crashes.
   3. Duplicate Google Directions API call eliminated — polyline cached once
      and reused by map tab.
-  4. Streamlit deprecation warnings fixed — use_container_width stays but
-     skeletons and GPS crash are resolved.
+  4. Streamlit deprecation warnings fixed — skeletons and GPS crash resolved.
+
+V7.3:
+  1. GPS widget moved inside with st.sidebar: — never fires on login page.
+  2. price_window underscore removed — Streamlit silently skips _-prefixed
+     params as cache keys; 15-minute price cache was never busting.
+  3. Admin tabs built before empty-data guard — Fleet + Analytics tabs were
+     disappearing whenever the price table returned empty.
 """
 from __future__ import annotations
 
@@ -102,19 +108,8 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 #MainMenu { visibility: hidden; }
 footer { visibility: hidden; }
 header { visibility: hidden; }
-/* Hide sidebar toggle and sidebar entirely on the login page */
-[data-testid="stSidebarNav"] { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
-
-# Inject CSS to collapse sidebar when not logged in
-if "logged_in" not in st.session_state or not st.session_state.get("logged_in"):
-    st.markdown("""
-    <style>
-    [data-testid="stSidebar"] { display: none !important; }
-    [data-testid="collapsedControl"] { display: none !important; }
-    </style>
-    """, unsafe_allow_html=True)
 
 
 def _init_session():
@@ -288,7 +283,7 @@ def _price_cache_window() -> str:
 
 @st.cache_data(ttl=900, show_spinner="Loading fuel prices…")
 def _cached_price_table(clat, clon, dlat, dlon, network, max_km, buffer_km, detour_cost, price_window):
-    # _price_window changes every 15 minutes, automatically busting the cache.
+    # price_window changes every 15 minutes, automatically busting the cache.
     return build_price_table(
         current_lat=clat, current_lon=clon,
         dest_lat=dlat, dest_lon=dlon,
@@ -361,16 +356,6 @@ def do_login():
                     username=str(username).strip(),
                     full_name=st.session_state.driver_full_name,
                     event="login",
-                )
-                # Clear Streamlit's localStorage sidebar state so the browser
-                # never inherits a collapsed sidebar from a previous session.
-                # Iterates all keys so it works across Streamlit versions.
-                st.markdown(
-                    "<script>try{var keys=Object.keys(localStorage);"
-                    "keys.forEach(function(k){if(k.indexOf('streamlit')>-1"
-                    "&&k.toLowerCase().indexOf('sidebar')>-1)"
-                    "{localStorage.removeItem(k);}});}catch(e){}</script>",
-                    unsafe_allow_html=True,
                 )
                 st.rerun()
             else:
