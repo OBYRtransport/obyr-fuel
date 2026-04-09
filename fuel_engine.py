@@ -470,7 +470,7 @@ def _get_subfolder_id(network_name: str) -> Optional[str]:
         files = list_drive_files(DRIVE_FOLDER_ID)
         for f in files:
             if (f.get("mimeType") == "application/vnd.google-apps.folder"
-                    and f["name"].lower() == key):
+                    and f["name"].lower().startswith(key)):
                 _SUBFOLDER_ID_CACHE[key] = f["id"]
                 return f["id"]
     except Exception:
