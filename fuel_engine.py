@@ -739,7 +739,8 @@ def _parse_petro_content(content: str) -> pd.DataFrame:
     for raw_line in lines:
         line = raw_line.rstrip()
         if not started:
-            if "SITE NAME" in line and "PST $/L" in line:
+            if ("SITE NAME" in line and "PST $/L" in line) or \
+                    ("NOM DE L" in line and "TVP" in line):
                 started = True
             continue
         if not line.strip() or line.strip().startswith("---"):
