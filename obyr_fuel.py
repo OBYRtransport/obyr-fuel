@@ -60,6 +60,18 @@ st.set_page_config(
 )
 
 BASE_DIR     = get_base_dir()
+
+# On the login page (not yet logged in), hide the sidebar and its toggle entirely.
+# After login, initial_sidebar_state="expanded" keeps it open.
+if not st.session_state.get("logged_in", False):
+    st.markdown(
+        "<style>"
+        "[data-testid='stSidebar']{display:none!important;}"
+        "[data-testid='stExpandSidebarButton']{display:none!important;}"
+        "[data-testid='collapsedControl']{display:none!important;}"
+        "</style>",
+        unsafe_allow_html=True,
+    )
 LOGO_PATH    = BASE_DIR / "obyr_logo.png"
 MAPS_API_KEY = os.getenv("GOOGLE_DIRECTIONS_API_KEY", "").strip()
 
@@ -106,6 +118,8 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 #MainMenu { visibility: hidden; }
 footer { visibility: hidden; }
 header { visibility: hidden; }
+/* Hide geolocation widget iframe — GPS still works, just no visible box */
+[data-testid="stCustomComponentV1"] iframe { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
