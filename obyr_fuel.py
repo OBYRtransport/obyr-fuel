@@ -1,14 +1,18 @@
 """
 OBYR Fuel — Streamlit UI
-Fixes from V7.2:
-  1. White box on login — GPS widget only mounts post-login, skeleton hidden
-  2. Address entry — server-side Google Places Autocomplete. User types into
-     a standard Streamlit text_input, Python calls Places API and returns
-     suggestions as a selectbox. No iframes, no JS postMessage, no crashes.
-  3. Duplicate Google Directions API call eliminated — polyline cached once
-     and reused by map tab.
-  4. Streamlit deprecation warnings fixed — use_container_width stays but
-     skeletons and GPS crash are resolved.
+
+V7.3:
+  1. GPS widget moved inside with st.sidebar: — never fires on login page.
+  2. price_window cache key added — auto-busts every 15 minutes so fresh
+     Drive files are picked up without manual refresh.
+  3. Admin tabs built before empty-data guard — Fleet + Analytics tabs were
+     disappearing whenever the price table returned empty.
+
+V7.4:
+  1. st.cache_data.clear() on every login — every user always gets fresh
+     data on login, regardless of what other users have cached.
+  2. Analytics log written to Google Drive instead of Render local disk —
+     usage_log.csv now survives redeploys permanently.
 """
 from __future__ import annotations
 
@@ -26,8 +30,8 @@ from fuel_engine import (
     NETWORK_COLOURS,
     authenticate_driver,
     get_driver_full_name,
-    get_driver_role,
     build_price_table,
+    get_driver_role,
     get_base_dir,
     get_route_polyline,
     price_staleness_days,
@@ -36,17 +40,23 @@ from fuel_engine import (
 )
 
 try:
+    import folium
+    from streamlit_folium import st_folium
+    MAP_AVAILABLE = True
+except ImportError:
+    MAP_AVAILABLE = False
+
+try:
     from geotab_engine import get_fleet_snapshot, fuel_window, TANK_CAPACITY_L
     GEOTAB_AVAILABLE = True
 except Exception:
     GEOTAB_AVAILABLE = False
 
 try:
-    import folium
-    from streamlit_folium import st_folium
-    MAP_AVAILABLE = True
-except ImportError:
-    MAP_AVAILABLE = False
+    from geotab_engine import get_fleet_snapshot, fuel_window, TANK_CAPACITY_L
+    GEOTAB_AVAILABLE = True
+except Exception:
+    GEOTAB_AVAILABLE = False
 
 # streamlit_geolocation imported lazily in main() after login gate only.
 
@@ -110,6 +120,7 @@ def _init_session():
     defaults = {
         "logged_in": False, "driver_name": "", "driver_full_name": "",
         "driver_role": "driver",
+        "driver_role": "driver",
         "current_lat": DEFAULT_YARD["lat"], "current_lon": DEFAULT_YARD["lon"],
         "current_label": DEFAULT_YARD["label"],
         "dest_lat": None, "dest_lon": None, "dest_label": "",
@@ -138,7 +149,7 @@ def _places_suggestions(query: str, api_key: str) -> list:
     return []
 
 
-@st.cache_data(ttl=1800, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False)
 def _place_coords(place_id: str, api_key: str):
     try:
         r = req.get(PLACES_DETAILS_URL, params={
@@ -212,7 +223,7 @@ def places_input(label: str, search_key: str, select_key: str, placeholder: str)
             @st.cache_resource
             def _nom():
                 return Nominatim(user_agent="obyr_fuel")
-            @st.cache_data(ttl=1800, show_spinner=False)
+            @st.cache_data(ttl=3600, show_spinner=False)
             def _geo(a):
                 try:
                     loc = _nom().geocode(a + ", Canada", timeout=5)
@@ -250,7 +261,7 @@ def places_input(label: str, search_key: str, select_key: str, placeholder: str)
         return None
 
 
-@st.cache_data(ttl=1800, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False)
 def _cached_polyline(clat, clon, dlat, dlon):
     if not MAPS_API_KEY:
         return None, 0.0
@@ -259,25 +270,22 @@ def _cached_polyline(clat, clon, dlat, dlon):
 
 
 def _price_cache_window() -> str:
-    """
-    Returns a key representing the current 15-minute window in Toronto time.
-    Uses only stdlib (zoneinfo + datetime) — no pytz required.
-    The key changes every 15 minutes, automatically busting the cache so
-    drivers always see prices within 15 minutes of them landing in Drive.
+    """Returns a string key for the current 15-minute window in Toronto time.
+    Changes every 15 minutes, busting the cache so Drive is re-queried.
+    NOTE: parameter must NOT start with _ or Streamlit ignores it as a cache key.
     """
     try:
         from zoneinfo import ZoneInfo
         now = datetime.now(ZoneInfo("America/Toronto"))
     except Exception:
-        # Fallback: UTC-based window (safe, just slightly off for DST)
         now = datetime.utcnow()
     window_minute = (now.minute // 15) * 15
     return f"{now.date()}-{now.hour:02d}-{window_minute:02d}"
 
 
 @st.cache_data(ttl=900, show_spinner="Loading fuel prices…")
-def _cached_price_table(clat, clon, dlat, dlon, network, max_km, buffer_km, detour_cost, _price_window):
-    # _price_window changes every 15 minutes, automatically busting the cache.
+def _cached_price_table(clat, clon, dlat, dlon, network, max_km, buffer_km, detour_cost, price_window):
+    # price_window changes every 15 min — forces a fresh Drive read automatically.
     return build_price_table(
         current_lat=clat, current_lon=clon,
         dest_lat=dlat, dest_lon=dlon,
@@ -342,6 +350,7 @@ def do_login():
             if not username or not password:
                 st.error("Please enter your e-mail and password.")
             elif authenticate_driver(username, password):
+                st.cache_data.clear()  # force fresh Drive data for every login
                 st.session_state.logged_in = True
                 st.session_state.driver_name = str(username).strip()
                 st.session_state.driver_full_name = get_driver_full_name(username)
@@ -406,14 +415,14 @@ def main():
     do_login()
     # Only authenticated users reach this point
 
-    gps_data = None
-    try:
-        from streamlit_geolocation import streamlit_geolocation
-        gps_data = streamlit_geolocation()
-    except Exception:
-        pass
-
     with st.sidebar:
+        gps_data = None
+        try:
+            from streamlit_geolocation import streamlit_geolocation
+            gps_data = streamlit_geolocation()
+        except Exception:
+            pass
+
         st.markdown("## ⛽ OBYR Fuel")
         full_name = st.session_state.get("driver_full_name", "")
         email     = st.session_state.driver_name
@@ -428,7 +437,6 @@ def main():
         else:
             st.success(f"👤 {email}")
         if st.button("Logout", use_container_width=True):
-            # Clear ALL cached data so the next login always pulls fresh prices from Drive
             st.cache_data.clear()
             for k in list(st.session_state.keys()):
                 del st.session_state[k]
@@ -506,10 +514,9 @@ def main():
     dlon  = st.session_state.dest_lon
     dlab  = st.session_state.dest_label or "None"
 
-    prices_df, meta = _cached_price_table(clat, clon, dlat, dlon, network, max_km, buf, det, _price_window=_price_cache_window())
+    prices_df, meta = _cached_price_table(clat, clon, dlat, dlon, network, max_km, buf, det, price_window=_price_cache_window())
 
-    # Log a search once per unique combination (session-keyed so it doesn't
-    # fire on every Streamlit rerun, only when the inputs actually change)
+    # Log search once per unique input combination
     _log_key = f"_logged_{clat}_{clon}_{dlat}_{dlon}_{network}"
     if _log_key not in st.session_state:
         st.session_state[_log_key] = True
@@ -523,7 +530,7 @@ def main():
             route_km=meta.get("route_distance_km", 0.0),
         )
 
-    # Fix 3: one polyline fetch, reused everywhere
+    # One polyline fetch, reused everywhere, reused everywhere
     polyline_pts  = None
     route_dist_km = 0.0
     if has_dest and MAPS_API_KEY:
@@ -574,7 +581,14 @@ def main():
     if is_admin:
         tab1, tab2, tab3, tab4, tab5 = st.tabs(["📋 Ranked Table", "🗺️ Map", "🔧 Data Status", "🚛 Fleet", "📊 Analytics"])
     else:
+        is_admin = st.session_state.get("driver_role") == "admin"
+
+    if is_admin:
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["📋 Ranked Table", "🗺️ Map", "🔧 Data Status", "🚛 Fleet", "📊 Analytics"])
+    else:
         tab1, tab2, tab3 = st.tabs(["📋 Ranked Table", "🗺️ Map", "🔧 Data Status"])
+        tab4 = None
+        tab5 = None
         tab4 = None
         tab5 = None
 
@@ -621,10 +635,10 @@ def main():
 
     with tab3:
         s1, s2, s3 = st.columns(3)
-        for col, ok_key, src_key, file_key, lbl, subfolder in [
-            (s1,"latest_petro_file","petro_source","latest_petro_file","Petro","Petro/"),
-            (s2,"latest_esso_file","esso_source","latest_esso_file","Esso","Esso/"),
-            (s3,"latest_irving_file","irving_source","latest_irving_file","Irving","Irving/"),
+        for col, ok_key, src_key, file_key, lbl in [
+            (s1,"latest_petro_file","petro_source","latest_petro_file","Petro"),
+            (s2,"latest_esso_file","esso_source","latest_esso_file","Esso"),
+            (s3,"latest_irving_file","irving_source","latest_irving_file","Irving"),
         ]:
             ok = bool(meta.get(ok_key))
             col.markdown(f"**{lbl}** \n{'✅' if ok else '⚠️'} {meta.get(src_key) or 'not found'}\n`{Path(meta[file_key]).name if ok else 'N/A'}`")
@@ -654,11 +668,22 @@ def main():
         with tab5:
             _render_admin_analytics()
 
+    if tab4 is not None:
+        with tab4:
+            _render_fleet()
+
+    if tab5 is not None:
+        with tab5:
+            _render_admin_analytics()
+
     st.markdown(
         f"<div class='footer'>© {datetime.now().year} OBYR Transportation Group Ltd. · OBYR Fuel</div>",
         unsafe_allow_html=True,
     )
 
+
+if __name__ == "__main__":
+    main()
 
 def _render_fleet():
     """Admin-only Fleet tab — live map with truck icons, fuel levels, and smart stop recommendations."""
@@ -1147,7 +1172,3 @@ def _render_admin_analytics():
         file_name=f"obyr_usage_log_{datetime.now().strftime('%Y-%m-%d')}.csv",
         mime="text/csv",
     )
-
-
-if __name__ == "__main__":
-    main()
