@@ -102,8 +102,19 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 #MainMenu { visibility: hidden; }
 footer { visibility: hidden; }
 header { visibility: hidden; }
+/* Hide sidebar toggle and sidebar entirely on the login page */
+[data-testid="stSidebarNav"] { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
+
+# Inject CSS to collapse sidebar when not logged in
+if "logged_in" not in st.session_state or not st.session_state.get("logged_in"):
+    st.markdown("""
+    <style>
+    [data-testid="stSidebar"] { display: none !important; }
+    [data-testid="collapsedControl"] { display: none !important; }
+    </style>
+    """, unsafe_allow_html=True)
 
 
 def _init_session():
@@ -276,7 +287,7 @@ def _price_cache_window() -> str:
 
 
 @st.cache_data(ttl=900, show_spinner="Loading fuel prices…")
-def _cached_price_table(clat, clon, dlat, dlon, network, max_km, buffer_km, detour_cost, _price_window):
+def _cached_price_table(clat, clon, dlat, dlon, network, max_km, buffer_km, detour_cost, price_window):
     # _price_window changes every 15 minutes, automatically busting the cache.
     return build_price_table(
         current_lat=clat, current_lon=clon,
@@ -351,6 +362,16 @@ def do_login():
                     full_name=st.session_state.driver_full_name,
                     event="login",
                 )
+                # Clear Streamlit's localStorage sidebar state so the browser
+                # never inherits a collapsed sidebar from a previous session.
+                # Iterates all keys so it works across Streamlit versions.
+                st.markdown(
+                    "<script>try{var keys=Object.keys(localStorage);"
+                    "keys.forEach(function(k){if(k.indexOf('streamlit')>-1"
+                    "&&k.toLowerCase().indexOf('sidebar')>-1)"
+                    "{localStorage.removeItem(k);}});}catch(e){}</script>",
+                    unsafe_allow_html=True,
+                )
                 st.rerun()
             else:
                 time.sleep(0.6)
@@ -406,14 +427,14 @@ def main():
     do_login()
     # Only authenticated users reach this point
 
-    gps_data = None
-    try:
-        from streamlit_geolocation import streamlit_geolocation
-        gps_data = streamlit_geolocation()
-    except Exception:
-        pass
-
     with st.sidebar:
+        gps_data = None
+        try:
+            from streamlit_geolocation import streamlit_geolocation
+            gps_data = streamlit_geolocation()
+        except Exception:
+            pass
+
         st.markdown("## ⛽ OBYR Fuel")
         full_name = st.session_state.get("driver_full_name", "")
         email     = st.session_state.driver_name
@@ -506,7 +527,7 @@ def main():
     dlon  = st.session_state.dest_lon
     dlab  = st.session_state.dest_label or "None"
 
-    prices_df, meta = _cached_price_table(clat, clon, dlat, dlon, network, max_km, buf, det, _price_window=_price_cache_window())
+    prices_df, meta = _cached_price_table(clat, clon, dlat, dlon, network, max_km, buf, det, price_window=_price_cache_window())
 
     # Log a search once per unique combination (session-keyed so it doesn't
     # fire on every Streamlit rerun, only when the inputs actually change)
@@ -565,10 +586,6 @@ def main():
     c4.metric("Stations shown", f"{meta['display_rows']}")
     st.divider()
 
-    if prices_df.empty:
-        st.warning("No stations found. Try widening corridor buffer, increasing radius, or changing network.")
-        return
-
     is_admin = st.session_state.get("driver_role") == "admin"
 
     if is_admin:
@@ -579,6 +596,8 @@ def main():
         tab5 = None
 
     with tab1:
+        if prices_df.empty:
+            st.warning("No stations found. Try widening corridor buffer, increasing radius, or changing network.")
         cols = ["Station_Name","Province","Network","Address",
                 "Km_from_Current","Km_from_Destination","Km_from_Yard","All_In_Price","Savings_per_1000L"]
         rmap = {"Station_Name":"Station","Km_from_Current":"Km (Current)",
