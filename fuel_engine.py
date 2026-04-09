@@ -1,7 +1,15 @@
 """
 OBYR Fuel Engine — Production
-Production engine — Google Directions API routing, SHA-256 hashed passwords,
-Canadian-only station filtering, and tri-network price aggregation.
+
+V7.3:
+  1. Subfolder name match changed to startswith — finds "Petro Shared folder",
+     "Esso Shared folder", "Irving Shared folder" after Drive reorganisation.
+  2. Petro parser handles French header (NOM DE L'ETABLISSEMENT / TVP) so
+     French-format price files are parsed correctly.
+
+V7.4:
+  1. Analytics log (usage_log.csv) now written to Google Drive instead of
+     Render local disk — survives redeploys permanently.
 """
 from __future__ import annotations
 
@@ -470,7 +478,7 @@ def _get_subfolder_id(network_name: str) -> Optional[str]:
         files = list_drive_files(DRIVE_FOLDER_ID)
         for f in files:
             if (f.get("mimeType") == "application/vnd.google-apps.folder"
-                    and f["name"].lower() == key):
+                    and f["name"].lower().startswith(key)):
                 _SUBFOLDER_ID_CACHE[key] = f["id"]
                 return f["id"]
     except Exception:
@@ -804,7 +812,8 @@ def _parse_petro_content(content: str) -> pd.DataFrame:
             continue
         if not line.strip() or line.strip().startswith("---"):
             continue
-        parts = [p.rstrip() for p in line.split(",")]
+        sep = "\t" if "\t" in line else ","
+        parts = [p.rstrip() for p in line.split(sep)]
         station = province = price = None
         if len(parts) >= 3:
             p0, p1, p2 = parts[0].strip(), parts[1].strip().upper(), parts[2].strip()

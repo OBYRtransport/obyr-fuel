@@ -409,282 +409,6 @@ def _hl(col_type):
     return f
 
 
-def main():
-    _init_session()
-
-    do_login()
-    # Only authenticated users reach this point
-
-    with st.sidebar:
-        gps_data = None
-        try:
-            from streamlit_geolocation import streamlit_geolocation
-            gps_data = streamlit_geolocation()
-        except Exception:
-            pass
-
-        st.markdown("## ⛽ OBYR Fuel")
-        full_name = st.session_state.get("driver_full_name", "")
-        email     = st.session_state.driver_name
-        if full_name:
-            st.markdown(
-                f"<div style='line-height:1.6;margin-bottom:0.5rem'>"
-                f"<span style='font-weight:700;color:#f8fafc;font-size:0.95rem'>👤 {full_name}</span><br>"
-                f"<span style='color:#94a3b8;font-size:0.78rem'>{email}</span>"
-                f"</div>",
-                unsafe_allow_html=True,
-            )
-        else:
-            st.success(f"👤 {email}")
-        if st.button("Logout", use_container_width=True):
-            st.cache_data.clear()
-            for k in list(st.session_state.keys()):
-                del st.session_state[k]
-            st.rerun()
-        st.divider()
-
-        st.markdown("### 📍 Current Location")
-        use_gps = st.checkbox("Use my GPS location", value=st.session_state.gps_acquired)
-        if use_gps and gps_data and gps_data.get("latitude"):
-            st.session_state.current_lat   = float(gps_data["latitude"])
-            st.session_state.current_lon   = float(gps_data["longitude"])
-            st.session_state.current_label = "GPS Location"
-            st.session_state.gps_acquired  = True
-            st.caption(f"GPS: {st.session_state.current_lat:.4f}, {st.session_state.current_lon:.4f}")
-
-        if not use_gps:
-            r = places_input(
-                label="Current address",
-                search_key="current_search",
-                select_key="current_select",
-                placeholder="e.g. 279 Belfield Rd, Etobicoke",
-            )
-            if r:
-                st.session_state.current_lat   = r["lat"]
-                st.session_state.current_lon   = r["lon"]
-                st.session_state.current_label = r["address"]
-                _cached_price_table.clear()
-                _cached_polyline.clear()
-
-        st.markdown("### 🏁 Destination")
-        r = places_input(
-            label="Destination",
-            search_key="dest_search",
-            select_key="dest_select",
-            placeholder="e.g. Moosehead Breweries, Saint John NB",
-        )
-        if r:
-            st.session_state.dest_lat   = r["lat"]
-            st.session_state.dest_lon   = r["lon"]
-            st.session_state.dest_label = r["address"]
-            _cached_price_table.clear()
-            _cached_polyline.clear()
-
-        if st.session_state.dest_lat is not None:
-            if st.button("✕ Clear destination", use_container_width=True):
-                st.session_state.dest_lat   = None
-                st.session_state.dest_lon   = None
-                st.session_state.dest_label = ""
-                _cached_price_table.clear()
-                _cached_polyline.clear()
-                st.rerun()
-
-        st.markdown("### 🔧 Filters")
-        network = st.radio("Network", ["All", "Petro", "Esso", "Irving"], index=0, horizontal=True)
-        has_dest = st.session_state.dest_lat is not None
-        if has_dest:
-            buf     = st.slider("Max detour from route (km)", 25, 200, 75, 25)
-            det     = st.slider("Detour cost $/km (truck)", 0.50, 4.00, 1.55, 0.05)
-            max_km  = 5000
-        else:
-            max_km  = st.slider("Max km from current location", 50, 2000, 500, 50)
-            buf     = 999
-            det     = 1.55
-
-        st.divider()
-        if st.button("🔄 Refresh prices", use_container_width=True):
-            _cached_price_table.clear()
-            _cached_polyline.clear()
-            st.rerun()
-
-    clat  = st.session_state.current_lat
-    clon  = st.session_state.current_lon
-    clab  = st.session_state.current_label
-    dlat  = st.session_state.dest_lat
-    dlon  = st.session_state.dest_lon
-    dlab  = st.session_state.dest_label or "None"
-
-    prices_df, meta = _cached_price_table(clat, clon, dlat, dlon, network, max_km, buf, det, price_window=_price_cache_window())
-
-    # Log search once per unique input combination
-    _log_key = f"_logged_{clat}_{clon}_{dlat}_{dlon}_{network}"
-    if _log_key not in st.session_state:
-        st.session_state[_log_key] = True
-        log_event(
-            username=st.session_state.driver_name,
-            full_name=st.session_state.get("driver_full_name", ""),
-            event="search",
-            origin_label=clab,
-            dest_label=dlab if dlat else "",
-            network=network,
-            route_km=meta.get("route_distance_km", 0.0),
-        )
-
-    # One polyline fetch, reused everywhere, reused everywhere
-    polyline_pts  = None
-    route_dist_km = 0.0
-    if has_dest and MAPS_API_KEY:
-        polyline_pts, route_dist_km = _cached_polyline(clat, clon, dlat, dlon)
-
-    rm = meta.get("routing_mode", "none")
-    if rm == "google_directions":
-        badge = f"<span class='route-badge route-google'>🛣️ Google Route ({route_dist_km:.0f} km)</span>"
-    elif rm == "straight_line_fallback":
-        badge = "<span class='route-badge route-fallback'>⚠️ Straight-line fallback</span>"
-    elif rm == "radius":
-        badge = f"<span class='route-badge route-radius'>📡 Radius {max_km} km</span>"
-    else:
-        badge = ""
-
-    hcol1, hcol2 = st.columns([3, 1])
-    with hcol1:
-        st.markdown("## ⛽ OBYR Fuel — Triple Network")
-        st.markdown(
-            f" · From: **{clab}** · To: **{dlab}** "
-            f"{'· Corridor 🛣️' if has_dest else '· Radius 📡'} "
-            f"· Network: **{network}** {badge}",
-            unsafe_allow_html=True,
-        )
-    with hcol2:
-        if LOGO_PATH.exists():
-            st.image(str(LOGO_PATH), width=160)
-
-    _stale_banner(meta)
-
-    top = prices_df.iloc[0] if not prices_df.empty else None
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("National avg (all-in)", f"${meta['avg_all_in']:.3f}/L" if meta["avg_all_in"] else "—")
-    c2.metric("Best stop (all-in)",
-              f"${top['All_In_Price']:.3f}/L" if top is not None else "—",
-              delta=f"${top['All_In_Price'] - meta['avg_all_in']:.3f} vs avg" if top is not None else None,
-              delta_color="inverse")
-    c3.metric("Saves / 1,000 L", f"${top['Savings_per_1000L']:,.0f}" if top is not None else "—")
-    c4.metric("Stations shown", f"{meta['display_rows']}")
-    st.divider()
-
-    if prices_df.empty:
-        st.warning("No stations found. Try widening corridor buffer, increasing radius, or changing network.")
-        return
-
-    is_admin = st.session_state.get("driver_role") == "admin"
-
-    if is_admin:
-        tab1, tab2, tab3, tab4, tab5 = st.tabs(["📋 Ranked Table", "🗺️ Map", "🔧 Data Status", "🚛 Fleet", "📊 Analytics"])
-    else:
-        is_admin = st.session_state.get("driver_role") == "admin"
-
-    if is_admin:
-        tab1, tab2, tab3, tab4, tab5 = st.tabs(["📋 Ranked Table", "🗺️ Map", "🔧 Data Status", "🚛 Fleet", "📊 Analytics"])
-    else:
-        tab1, tab2, tab3 = st.tabs(["📋 Ranked Table", "🗺️ Map", "🔧 Data Status"])
-        tab4 = None
-        tab5 = None
-        tab4 = None
-        tab5 = None
-
-    with tab1:
-        cols = ["Station_Name","Province","Network","Address",
-                "Km_from_Current","Km_from_Destination","Km_from_Yard","All_In_Price","Savings_per_1000L"]
-        rmap = {"Station_Name":"Station","Km_from_Current":"Km (Current)",
-                "Km_from_Destination":"Km (Dest)","Km_from_Yard":"Km (Yard)",
-                "All_In_Price":"All-In $/L","Savings_per_1000L":"Saves / 1kL"}
-        if has_dest and "Detour_Extra_Km" in prices_df.columns and "Composite_Score" in prices_df.columns:
-            cols += ["Detour_Extra_Km","Composite_Score"]
-            rmap["Detour_Extra_Km"]  = "Detour Km"
-            rmap["Composite_Score"]  = "Net Value $"
-
-        ddf = prices_df[cols].copy().head(75).rename(columns=rmap)
-        fmt = {"Km (Current)":"{:.0f}","Km (Dest)":"{:.0f}","Km (Yard)":"{:.0f}",
-               "All-In $/L":"${:.3f}","Saves / 1kL":"${:,.0f}"}
-        if has_dest:
-            fmt["Detour Km"]  = "{:.0f}"
-            fmt["Net Value $"] = "${:,.0f}"
-
-        styled = ddf.style.format(fmt).map(_hl("savings"), subset=["Saves / 1kL"]).map(_hl("network"), subset=["Network"])
-        if has_dest and "Net Value $" in ddf.columns:
-            styled = styled.map(_hl("composite"), subset=["Net Value $"])
-
-        st.dataframe(styled, use_container_width=True, hide_index=True)
-        st.download_button("⬇️ Download CSV", prices_df.to_csv(index=False),
-                           file_name=f"obyr_fuel_{datetime.now().strftime('%Y-%m-%d')}.csv", mime="text/csv")
-        if has_dest:
-            mt = "Google highway routing" if rm == "google_directions" else "straight-line estimate"
-            st.info(f"💡 **Net Value $** = savings per 1,000 L minus detour cost ({mt}).")
-
-    with tab2:
-        if not MAP_AVAILABLE:
-            st.warning("Map requires folium and streamlit-folium.")
-        else:
-            mdf = prices_df.dropna(subset=["Latitude","Longitude"])
-            if mdf.empty:
-                st.warning("No stations with coordinates.")
-            else:
-                m = _build_map(mdf, clat, clon, dlat, dlon, polyline=polyline_pts)
-                st_folium(m, use_container_width=True, height=560, returned_objects=[])
-                st.caption("🔴 Petro-Canada &nbsp; 🔵 Esso &nbsp; 🟢 Irving &nbsp; 📍 Current &nbsp; 🏁 Destination &nbsp; 🔵 line = actual highway")
-
-    with tab3:
-        s1, s2, s3 = st.columns(3)
-        for col, ok_key, src_key, file_key, lbl in [
-            (s1,"latest_petro_file","petro_source","latest_petro_file","Petro"),
-            (s2,"latest_esso_file","esso_source","latest_esso_file","Esso"),
-            (s3,"latest_irving_file","irving_source","latest_irving_file","Irving"),
-        ]:
-            ok = bool(meta.get(ok_key))
-            col.markdown(f"**{lbl}** \n{'✅' if ok else '⚠️'} {meta.get(src_key) or 'not found'}\n`{Path(meta[file_key]).name if ok else 'N/A'}`")
-
-        st.markdown("**Routing**")
-        if MAPS_API_KEY:
-            st.success("✅ Google Directions API + Places API active")
-        else:
-            st.warning("⚠️ No API key — Nominatim fallback active")
-
-        st.dataframe(pd.DataFrame([
-            {"Network":"Petro",  "Source rows":meta.get("petro_source_rows",0),  "Matched":meta.get("petro_matched_rows",0),  "Stale (days)":meta.get("petro_stale_days","?")},
-            {"Network":"Esso",   "Source rows":meta.get("esso_source_rows",0),   "Matched":meta.get("esso_matched_rows",0),   "Stale (days)":meta.get("esso_stale_days","?")},
-            {"Network":"Irving", "Source rows":meta.get("irving_source_rows",0), "Matched":meta.get("irving_matched_rows",0), "Stale (days)":meta.get("irving_stale_days","?")},
-        ]), hide_index=True, use_container_width=True)
-
-        unmatched = prices_df[~prices_df["Matched"]][["Station_Name","Province","Network","Address"]].copy()
-        if not unmatched.empty:
-            with st.expander(f"⚠️ {len(unmatched)} unmatched stations"):
-                st.dataframe(unmatched, hide_index=True, use_container_width=True)
-
-    if tab4 is not None:
-        with tab4:
-            _render_fleet()
-
-    if tab5 is not None:
-        with tab5:
-            _render_admin_analytics()
-
-    if tab4 is not None:
-        with tab4:
-            _render_fleet()
-
-    if tab5 is not None:
-        with tab5:
-            _render_admin_analytics()
-
-    st.markdown(
-        f"<div class='footer'>© {datetime.now().year} OBYR Transportation Group Ltd. · OBYR Fuel</div>",
-        unsafe_allow_html=True,
-    )
-
-
-if __name__ == "__main__":
-    main()
-
 def _render_fleet():
     """Admin-only Fleet tab — live map with truck icons, fuel levels, and smart stop recommendations."""
 
@@ -992,6 +716,7 @@ def _render_fleet():
     )
 
 
+
 def _render_admin_analytics():
     """Full utilisation dashboard — only reachable when driver_role == 'admin'."""
     from datetime import timedelta
@@ -1172,3 +897,276 @@ def _render_admin_analytics():
         file_name=f"obyr_usage_log_{datetime.now().strftime('%Y-%m-%d')}.csv",
         mime="text/csv",
     )
+
+
+def main():
+    _init_session()
+
+    do_login()
+    # Only authenticated users reach this point
+
+    with st.sidebar:
+        gps_data = None
+        try:
+            from streamlit_geolocation import streamlit_geolocation
+            gps_data = streamlit_geolocation()
+        except Exception:
+            pass
+
+        st.markdown("## ⛽ OBYR Fuel")
+        full_name = st.session_state.get("driver_full_name", "")
+        email     = st.session_state.driver_name
+        if full_name:
+            st.markdown(
+                f"<div style='line-height:1.6;margin-bottom:0.5rem'>"
+                f"<span style='font-weight:700;color:#f8fafc;font-size:0.95rem'>👤 {full_name}</span><br>"
+                f"<span style='color:#94a3b8;font-size:0.78rem'>{email}</span>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+        else:
+            st.success(f"👤 {email}")
+        if st.button("Logout", use_container_width=True):
+            st.cache_data.clear()
+            for k in list(st.session_state.keys()):
+                del st.session_state[k]
+            st.rerun()
+        st.divider()
+
+        st.markdown("### 📍 Current Location")
+        use_gps = st.checkbox("Use my GPS location", value=st.session_state.gps_acquired)
+        if use_gps and gps_data and gps_data.get("latitude"):
+            st.session_state.current_lat   = float(gps_data["latitude"])
+            st.session_state.current_lon   = float(gps_data["longitude"])
+            st.session_state.current_label = "GPS Location"
+            st.session_state.gps_acquired  = True
+            st.caption(f"GPS: {st.session_state.current_lat:.4f}, {st.session_state.current_lon:.4f}")
+
+        if not use_gps:
+            r = places_input(
+                label="Current address",
+                search_key="current_search",
+                select_key="current_select",
+                placeholder="e.g. 279 Belfield Rd, Etobicoke",
+            )
+            if r:
+                st.session_state.current_lat   = r["lat"]
+                st.session_state.current_lon   = r["lon"]
+                st.session_state.current_label = r["address"]
+                _cached_price_table.clear()
+                _cached_polyline.clear()
+
+        st.markdown("### 🏁 Destination")
+        r = places_input(
+            label="Destination",
+            search_key="dest_search",
+            select_key="dest_select",
+            placeholder="e.g. Moosehead Breweries, Saint John NB",
+        )
+        if r:
+            st.session_state.dest_lat   = r["lat"]
+            st.session_state.dest_lon   = r["lon"]
+            st.session_state.dest_label = r["address"]
+            _cached_price_table.clear()
+            _cached_polyline.clear()
+
+        if st.session_state.dest_lat is not None:
+            if st.button("✕ Clear destination", use_container_width=True):
+                st.session_state.dest_lat   = None
+                st.session_state.dest_lon   = None
+                st.session_state.dest_label = ""
+                _cached_price_table.clear()
+                _cached_polyline.clear()
+                st.rerun()
+
+        st.markdown("### 🔧 Filters")
+        network = st.radio("Network", ["All", "Petro", "Esso", "Irving"], index=0, horizontal=True)
+        has_dest = st.session_state.dest_lat is not None
+        if has_dest:
+            buf     = st.slider("Max detour from route (km)", 25, 200, 75, 25)
+            det     = st.slider("Detour cost $/km (truck)", 0.50, 4.00, 1.55, 0.05)
+            max_km  = 5000
+        else:
+            max_km  = st.slider("Max km from current location", 50, 2000, 500, 50)
+            buf     = 999
+            det     = 1.55
+
+        st.divider()
+        if st.button("🔄 Refresh prices", use_container_width=True):
+            _cached_price_table.clear()
+            _cached_polyline.clear()
+            st.rerun()
+
+    clat  = st.session_state.current_lat
+    clon  = st.session_state.current_lon
+    clab  = st.session_state.current_label
+    dlat  = st.session_state.dest_lat
+    dlon  = st.session_state.dest_lon
+    dlab  = st.session_state.dest_label or "None"
+
+    prices_df, meta = _cached_price_table(clat, clon, dlat, dlon, network, max_km, buf, det, price_window=_price_cache_window())
+
+    # Log search once per unique input combination
+    _log_key = f"_logged_{clat}_{clon}_{dlat}_{dlon}_{network}"
+    if _log_key not in st.session_state:
+        st.session_state[_log_key] = True
+        log_event(
+            username=st.session_state.driver_name,
+            full_name=st.session_state.get("driver_full_name", ""),
+            event="search",
+            origin_label=clab,
+            dest_label=dlab if dlat else "",
+            network=network,
+            route_km=meta.get("route_distance_km", 0.0),
+        )
+
+    # One polyline fetch, reused everywhere, reused everywhere
+    polyline_pts  = None
+    route_dist_km = 0.0
+    if has_dest and MAPS_API_KEY:
+        polyline_pts, route_dist_km = _cached_polyline(clat, clon, dlat, dlon)
+
+    rm = meta.get("routing_mode", "none")
+    if rm == "google_directions":
+        badge = f"<span class='route-badge route-google'>🛣️ Google Route ({route_dist_km:.0f} km)</span>"
+    elif rm == "straight_line_fallback":
+        badge = "<span class='route-badge route-fallback'>⚠️ Straight-line fallback</span>"
+    elif rm == "radius":
+        badge = f"<span class='route-badge route-radius'>📡 Radius {max_km} km</span>"
+    else:
+        badge = ""
+
+    hcol1, hcol2 = st.columns([3, 1])
+    with hcol1:
+        st.markdown("## ⛽ OBYR Fuel — Triple Network")
+        st.markdown(
+            f" · From: **{clab}** · To: **{dlab}** "
+            f"{'· Corridor 🛣️' if has_dest else '· Radius 📡'} "
+            f"· Network: **{network}** {badge}",
+            unsafe_allow_html=True,
+        )
+    with hcol2:
+        if LOGO_PATH.exists():
+            st.image(str(LOGO_PATH), width=160)
+
+    _stale_banner(meta)
+
+    top = prices_df.iloc[0] if not prices_df.empty else None
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("National avg (all-in)", f"${meta['avg_all_in']:.3f}/L" if meta["avg_all_in"] else "—")
+    c2.metric("Best stop (all-in)",
+              f"${top['All_In_Price']:.3f}/L" if top is not None else "—",
+              delta=f"${top['All_In_Price'] - meta['avg_all_in']:.3f} vs avg" if top is not None else None,
+              delta_color="inverse")
+    c3.metric("Saves / 1,000 L", f"${top['Savings_per_1000L']:,.0f}" if top is not None else "—")
+    c4.metric("Stations shown", f"{meta['display_rows']}")
+    st.divider()
+
+    if prices_df.empty:
+        st.warning("No stations found. Try widening corridor buffer, increasing radius, or changing network.")
+        return
+
+    is_admin = st.session_state.get("driver_role") == "admin"
+
+    if is_admin:
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["📋 Ranked Table", "🗺️ Map", "🔧 Data Status", "🚛 Fleet", "📊 Analytics"])
+    else:
+        is_admin = st.session_state.get("driver_role") == "admin"
+
+    if is_admin:
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["📋 Ranked Table", "🗺️ Map", "🔧 Data Status", "🚛 Fleet", "📊 Analytics"])
+    else:
+        tab1, tab2, tab3 = st.tabs(["📋 Ranked Table", "🗺️ Map", "🔧 Data Status"])
+        tab4 = None
+        tab5 = None
+        tab4 = None
+        tab5 = None
+
+    with tab1:
+        cols = ["Station_Name","Province","Network","Address",
+                "Km_from_Current","Km_from_Destination","Km_from_Yard","All_In_Price","Savings_per_1000L"]
+        rmap = {"Station_Name":"Station","Km_from_Current":"Km (Current)",
+                "Km_from_Destination":"Km (Dest)","Km_from_Yard":"Km (Yard)",
+                "All_In_Price":"All-In $/L","Savings_per_1000L":"Saves / 1kL"}
+        if has_dest and "Detour_Extra_Km" in prices_df.columns and "Composite_Score" in prices_df.columns:
+            cols += ["Detour_Extra_Km","Composite_Score"]
+            rmap["Detour_Extra_Km"]  = "Detour Km"
+            rmap["Composite_Score"]  = "Net Value $"
+
+        ddf = prices_df[cols].copy().head(75).rename(columns=rmap)
+        fmt = {"Km (Current)":"{:.0f}","Km (Dest)":"{:.0f}","Km (Yard)":"{:.0f}",
+               "All-In $/L":"${:.3f}","Saves / 1kL":"${:,.0f}"}
+        if has_dest:
+            fmt["Detour Km"]  = "{:.0f}"
+            fmt["Net Value $"] = "${:,.0f}"
+
+        styled = ddf.style.format(fmt).map(_hl("savings"), subset=["Saves / 1kL"]).map(_hl("network"), subset=["Network"])
+        if has_dest and "Net Value $" in ddf.columns:
+            styled = styled.map(_hl("composite"), subset=["Net Value $"])
+
+        st.dataframe(styled, use_container_width=True, hide_index=True)
+        st.download_button("⬇️ Download CSV", prices_df.to_csv(index=False),
+                           file_name=f"obyr_fuel_{datetime.now().strftime('%Y-%m-%d')}.csv", mime="text/csv")
+        if has_dest:
+            mt = "Google highway routing" if rm == "google_directions" else "straight-line estimate"
+            st.info(f"💡 **Net Value $** = savings per 1,000 L minus detour cost ({mt}).")
+
+    with tab2:
+        if not MAP_AVAILABLE:
+            st.warning("Map requires folium and streamlit-folium.")
+        else:
+            mdf = prices_df.dropna(subset=["Latitude","Longitude"])
+            if mdf.empty:
+                st.warning("No stations with coordinates.")
+            else:
+                m = _build_map(mdf, clat, clon, dlat, dlon, polyline=polyline_pts)
+                st_folium(m, use_container_width=True, height=560, returned_objects=[])
+                st.caption("🔴 Petro-Canada &nbsp; 🔵 Esso &nbsp; 🟢 Irving &nbsp; 📍 Current &nbsp; 🏁 Destination &nbsp; 🔵 line = actual highway")
+
+    with tab3:
+        s1, s2, s3 = st.columns(3)
+        for col, ok_key, src_key, file_key, lbl in [
+            (s1,"latest_petro_file","petro_source","latest_petro_file","Petro"),
+            (s2,"latest_esso_file","esso_source","latest_esso_file","Esso"),
+            (s3,"latest_irving_file","irving_source","latest_irving_file","Irving"),
+        ]:
+            ok = bool(meta.get(ok_key))
+            col.markdown(f"**{lbl}** \n{'✅' if ok else '⚠️'} {meta.get(src_key) or 'not found'}\n`{Path(meta[file_key]).name if ok else 'N/A'}`")
+
+        st.markdown("**Routing**")
+        if MAPS_API_KEY:
+            st.success("✅ Google Directions API + Places API active")
+        else:
+            st.warning("⚠️ No API key — Nominatim fallback active")
+
+        st.dataframe(pd.DataFrame([
+            {"Network":"Petro",  "Source rows":meta.get("petro_source_rows",0),  "Matched":meta.get("petro_matched_rows",0),  "Stale (days)":meta.get("petro_stale_days","?")},
+            {"Network":"Esso",   "Source rows":meta.get("esso_source_rows",0),   "Matched":meta.get("esso_matched_rows",0),   "Stale (days)":meta.get("esso_stale_days","?")},
+            {"Network":"Irving", "Source rows":meta.get("irving_source_rows",0), "Matched":meta.get("irving_matched_rows",0), "Stale (days)":meta.get("irving_stale_days","?")},
+        ]), hide_index=True, use_container_width=True)
+
+        unmatched = prices_df[~prices_df["Matched"]][["Station_Name","Province","Network","Address"]].copy()
+        if not unmatched.empty:
+            with st.expander(f"⚠️ {len(unmatched)} unmatched stations"):
+                st.dataframe(unmatched, hide_index=True, use_container_width=True)
+
+    if tab4 is not None:
+        with tab4:
+            _render_fleet()
+
+    if tab5 is not None:
+        with tab5:
+            _render_admin_analytics()
+
+    st.markdown(
+        f"<div class='footer'>© {datetime.now().year} OBYR Transportation Group Ltd. · OBYR Fuel</div>",
+        unsafe_allow_html=True,
+    )
+
+
+if __name__ == "__main__":
+    main()
+
+
+if __name__ == "__main__":
+    main()
