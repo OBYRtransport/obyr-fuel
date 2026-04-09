@@ -260,25 +260,24 @@ def _cached_polyline(clat, clon, dlat, dlon):
 
 def _price_cache_window() -> str:
     """
-    Returns a string key representing the current 'pricing window'.
-    Prices update once daily after 7:35am Toronto time.
-    The key changes at 7:35am each day, which busts the cache automatically —
-    no logout required. Drivers who open the app after 7:35am always get
-    today's prices, even if they never logged out.
+    Returns a key representing the current 15-minute window in Toronto time.
+    Uses only stdlib (zoneinfo + datetime) — no pytz required.
+    The key changes every 15 minutes, automatically busting the cache so
+    drivers always see prices within 15 minutes of them landing in Drive.
     """
-    import pytz
-    toronto = pytz.timezone("America/Toronto")
-    now = datetime.now(toronto)
-    # If before 7:35am, we're still in yesterday's pricing window
-    cutoff = now.replace(hour=7, minute=35, second=0, microsecond=0)
-    window_date = now.date() if now >= cutoff else (now.date() - __import__("datetime").timedelta(days=1))
-    return str(window_date)
+    try:
+        from zoneinfo import ZoneInfo
+        now = datetime.now(ZoneInfo("America/Toronto"))
+    except Exception:
+        # Fallback: UTC-based window (safe, just slightly off for DST)
+        now = datetime.utcnow()
+    window_minute = (now.minute // 15) * 15
+    return f"{now.date()}-{now.hour:02d}-{window_minute:02d}"
 
 
-@st.cache_data(ttl=1800, show_spinner="Loading fuel prices…")
+@st.cache_data(ttl=900, show_spinner="Loading fuel prices…")
 def _cached_price_table(clat, clon, dlat, dlon, network, max_km, buffer_km, detour_cost, _price_window):
-    # _price_window is included in the cache key so the cache auto-busts at 7:35am daily.
-    # The leading underscore prevents Streamlit from hashing it (it's already a simple string).
+    # _price_window changes every 15 minutes, automatically busting the cache.
     return build_price_table(
         current_lat=clat, current_lon=clon,
         dest_lat=dlat, dest_lon=dlon,
