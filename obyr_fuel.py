@@ -1,18 +1,26 @@
 """
 OBYR Fuel — Streamlit UI
 
-V7.3:
-  1. GPS widget moved inside with st.sidebar: — never fires on login page.
-  2. price_window cache key added — auto-busts every 15 minutes so fresh
-     Drive files are picked up without manual refresh.
-  3. Admin tabs built before empty-data guard — Fleet + Analytics tabs were
-     disappearing whenever the price table returned empty.
-
-V7.4:
-  1. st.cache_data.clear() on every login — every user always gets fresh
-     data on login, regardless of what other users have cached.
-  2. Analytics log written to Google Drive instead of Render local disk —
-     usage_log.csv now survives redeploys permanently.
+V7.5 (Debug fixes):
+  1. Sidebar toggle fixed — login-page CSS no longer hides the global
+     stExpandSidebarButton / collapsedControl so the toggle works after
+     login. Sidebar is only visually hidden pre-login.
+  2. Map & searchbox rendering fixed — the GPS iframe hide selector was
+     nuking ALL custom components (folium map, streamlit-searchbox).
+     Now scoped to a unique wrapper so only the GPS widget is hidden.
+  3. Theme toggle added — System / Dark / Light, persisted in session
+     state, applied via CSS variables over the whole app.
+  4. Directions fixed — dropped overly aggressive avoid=ferries|tolls
+     that was failing routes into PEI and on toll-road corridors; kept
+     Canadian waypoint biasing so routes stay in Canada.
+  5. Fresh prices on every session start — st.cache_data.clear() now
+     fires once per user session BEFORE any data is fetched, not only on
+     explicit login, so refreshes and stale sessions always pull live
+     Drive data.
+  6. Analytics: Drive log writes now pass supportsAllDrives=True so the
+     usage_log.csv survives on shared drives too.
+  7. Modernised visuals — gradient header, card-style metrics, softer
+     shadows, better type scale.
 """
 from __future__ import annotations
 
@@ -61,14 +69,24 @@ st.set_page_config(
 
 BASE_DIR     = get_base_dir()
 
-# On the login page (not yet logged in), hide the sidebar and its toggle entirely.
-# After login, initial_sidebar_state="expanded" keeps it open.
+# ── Fresh-data guarantee ───────────────────────────────────────────────────
+# Clear all cached data exactly once per Streamlit session. This runs BEFORE
+# any price-table or Drive fetch, so every time the site is opened (new
+# login, refreshed tab, previous logout, whatever) the very first fetch
+# goes straight to Google Drive and pulls the newest price files.
+if not st.session_state.get("_session_cache_cleared", False):
+    try:
+        st.cache_data.clear()
+    except Exception:
+        pass
+    st.session_state["_session_cache_cleared"] = True
+
+# On the login page only, hide the sidebar *body* but leave the toggle
+# buttons alone so the toggle keeps working after login.
 if not st.session_state.get("logged_in", False):
     st.markdown(
         "<style>"
         "[data-testid='stSidebar']{display:none!important;}"
-        "[data-testid='stExpandSidebarButton']{display:none!important;}"
-        "[data-testid='collapsedControl']{display:none!important;}"
         "</style>",
         unsafe_allow_html=True,
     )
@@ -78,50 +96,199 @@ MAPS_API_KEY = os.getenv("GOOGLE_DIRECTIONS_API_KEY", "").strip()
 PLACES_AUTOCOMPLETE_URL = "https://maps.googleapis.com/maps/api/place/autocomplete/json"
 PLACES_DETAILS_URL      = "https://maps.googleapis.com/maps/api/place/details/json"
 
-st.markdown("""
+def _inject_theme_css(mode: str = "system"):
+    """
+    Inject theme-aware CSS. Supports 'system', 'dark', 'light'.
+    'system' uses a @media (prefers-color-scheme) block so it auto-follows
+    the OS/browser setting. 'dark' and 'light' force the palette.
+    """
+    light_vars = """
+        --bg: #f8fafc;  --surface: #ffffff;  --surface-2: #f1f5f9;
+        --border: #e2e8f0;
+        --text: #0f172a;  --text-muted: #64748b;
+        --accent: #2563eb;  --accent-2: #1d4ed8;
+        --sidebar-bg: #0f172a;  --sidebar-text: #e2e8f0;
+        --sidebar-heading: #f8fafc;  --sidebar-muted: #94a3b8;
+        --metric-bg: #ffffff;  --metric-border: #e2e8f0;
+        --metric-label: #64748b;  --metric-value: #0f172a;
+        --warning-bg: #fef3c7;  --warning-bar: #f59e0b;  --warning-text: #92400e;
+    """
+    dark_vars = """
+        --bg: #0b1120;  --surface: #111827;  --surface-2: #1e293b;
+        --border: #1f2937;
+        --text: #f1f5f9;  --text-muted: #94a3b8;
+        --accent: #60a5fa;  --accent-2: #3b82f6;
+        --sidebar-bg: #0a0f1c;  --sidebar-text: #e2e8f0;
+        --sidebar-heading: #f8fafc;  --sidebar-muted: #94a3b8;
+        --metric-bg: #111827;  --metric-border: #1f2937;
+        --metric-label: #94a3b8;  --metric-value: #f8fafc;
+        --warning-bg: #3b2f12;  --warning-bar: #f59e0b;  --warning-text: #fde68a;
+    """
+    if mode == "dark":
+        root_block = f":root {{ {dark_vars} }}"
+    elif mode == "light":
+        root_block = f":root {{ {light_vars} }}"
+    else:  # system — follow prefers-color-scheme
+        root_block = (
+            f":root {{ {light_vars} }}"
+            f"@media (prefers-color-scheme: dark) {{ :root {{ {dark_vars} }} }}"
+        )
+
+    st.markdown(f"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
-html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
-[data-testid="stSidebar"] { background: #0f172a; color: #e2e8f0; }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
+{root_block}
+
+html, body, [class*="css"], .stApp {{
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg) !important;
+    color: var(--text);
+}}
+.stApp {{ background: var(--bg) !important; }}
+h1, h2, h3, h4, h5, h6, p, label, span, div {{ color: var(--text); }}
+a, a:visited {{ color: var(--accent); }}
+
+/* ── Sidebar ────────────────────────────────────────────────────────── */
+[data-testid="stSidebar"] {{
+    background: var(--sidebar-bg) !important;
+    color: var(--sidebar-text) !important;
+    border-right: 1px solid var(--border);
+}}
 [data-testid="stSidebar"] label,
 [data-testid="stSidebar"] .stMarkdown,
 [data-testid="stSidebar"] .stRadio label,
-[data-testid="stSidebar"] p { color: #cbd5e1 !important; }
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] span,
+[data-testid="stSidebar"] div {{
+    color: var(--sidebar-text) !important;
+}}
+[data-testid="stSidebar"] h1,
 [data-testid="stSidebar"] h2,
-[data-testid="stSidebar"] h3 {
-    color: #f8fafc !important; font-size: 0.8rem;
-    letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600;
-}
-[data-testid="metric-container"] {
-    background: #f8fafc; border: 1px solid #e2e8f0;
-    border-radius: 10px; padding: 1rem 1.2rem;
-}
-[data-testid="metric-container"] label { color: #64748b !important; font-size: 0.78rem; }
-[data-testid="metric-container"] [data-testid="stMetricValue"] {
-    font-family: 'DM Mono', monospace; font-size: 1.5rem; color: #0f172a;
-}
-.stale-warning {
-    background: #fef3c7; border-left: 4px solid #f59e0b;
-    border-radius: 6px; padding: 0.6rem 1rem;
-    font-size: 0.85rem; color: #92400e; margin-bottom: 0.5rem;
-}
-.route-badge {
-    display: inline-block; padding: 3px 10px; border-radius: 20px;
-    font-size: 0.75rem; font-weight: 600; margin-left: 8px;
-}
-.route-google   { background: #dcfce7; color: #166534; }
-.route-fallback { background: #fef9c3; color: #854d0e; }
-.route-radius   { background: #dbeafe; color: #1e40af; }
-.login-heading  { font-size: 1.4rem; font-weight: 700; margin-bottom: 1rem; }
-.footer { font-size: 0.72rem; color: #94a3b8; text-align: center; padding: 1.5rem 0 0.5rem; }
-[data-testid="stSkeleton"] { display: none !important; }
-#MainMenu { visibility: hidden; }
-footer { visibility: hidden; }
-header { visibility: hidden; }
-/* Hide geolocation widget iframe — GPS still works, just no visible box */
-[data-testid="stCustomComponentV1"] iframe { display: none !important; }
+[data-testid="stSidebar"] h3,
+[data-testid="stSidebar"] h4 {{
+    color: var(--sidebar-heading) !important;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 700;
+}}
+
+/* ── Metrics — modern card style ────────────────────────────────────── */
+[data-testid="metric-container"] {{
+    background: var(--metric-bg);
+    border: 1px solid var(--metric-border);
+    border-radius: 14px;
+    padding: 1.1rem 1.3rem;
+    box-shadow: 0 1px 3px rgba(15,23,42,0.06), 0 1px 2px rgba(15,23,42,0.04);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}}
+[data-testid="metric-container"]:hover {{
+    box-shadow: 0 4px 12px rgba(15,23,42,0.08), 0 2px 4px rgba(15,23,42,0.04);
+}}
+[data-testid="metric-container"] label {{
+    color: var(--metric-label) !important;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+}}
+[data-testid="metric-container"] [data-testid="stMetricValue"] {{
+    font-family: 'DM Mono', monospace;
+    font-size: 1.6rem;
+    color: var(--metric-value);
+    font-weight: 600;
+}}
+
+/* ── Header banner ──────────────────────────────────────────────────── */
+.header-banner {{
+    background: linear-gradient(135deg, var(--accent-2) 0%, var(--accent) 100%);
+    color: #ffffff;
+    padding: 1.4rem 1.8rem;
+    border-radius: 16px;
+    margin-bottom: 1.2rem;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
+}}
+.header-banner h1 {{
+    color: #ffffff !important;
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}}
+.header-banner .sub {{
+    color: rgba(255,255,255,0.9);
+    font-size: 0.92rem;
+    margin-top: 0.35rem;
+}}
+
+/* ── Tables & tabs ──────────────────────────────────────────────────── */
+.stDataFrame, [data-testid="stTable"] {{
+    border-radius: 12px;
+    overflow: hidden;
+}}
+.stTabs [data-baseweb="tab-list"] {{
+    gap: 4px;
+}}
+.stTabs [data-baseweb="tab"] {{
+    border-radius: 10px 10px 0 0;
+    padding: 0.55rem 1rem;
+    font-weight: 600;
+}}
+
+/* ── Warnings & badges ──────────────────────────────────────────────── */
+.stale-warning {{
+    background: var(--warning-bg);
+    border-left: 4px solid var(--warning-bar);
+    border-radius: 8px;
+    padding: 0.7rem 1.1rem;
+    font-size: 0.88rem;
+    color: var(--warning-text);
+    margin-bottom: 0.6rem;
+}}
+.route-badge {{
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-left: 8px;
+}}
+.route-google   {{ background: #dcfce7; color: #166534; }}
+.route-fallback {{ background: #fef9c3; color: #854d0e; }}
+.route-radius   {{ background: #dbeafe; color: #1e40af; }}
+
+.login-heading  {{ font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; color: var(--text); }}
+.footer {{
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    text-align: center;
+    padding: 1.5rem 0 0.5rem;
+}}
+
+/* Hide Streamlit chrome */
+[data-testid="stSkeleton"] {{ display: none !important; }}
+#MainMenu {{ visibility: hidden; }}
+footer {{ visibility: hidden; }}
+header {{ visibility: hidden; }}
+
+/* ── Geolocation widget hide — SCOPED ───────────────────────────────
+   Previously a global [data-testid=stCustomComponentV1] iframe display:none
+   was nuking the folium map and streamlit-searchbox. Now we only hide
+   iframes inside the .gps-hidden wrapper div. */
+.gps-hidden [data-testid="stCustomComponentV1"],
+.gps-hidden iframe {{
+    display: none !important;
+    height: 0 !important;
+    overflow: hidden !important;
+}}
 </style>
 """, unsafe_allow_html=True)
+
+
+# Apply the current theme immediately (before any UI is rendered). The
+# actual radio control lives in the sidebar and triggers a rerun which
+# re-injects this CSS with the new mode.
+_inject_theme_css(st.session_state.get("theme_mode", "system"))
 
 
 def _init_session():
@@ -423,12 +590,16 @@ def main():
     # Only authenticated users reach this point
 
     with st.sidebar:
+        # GPS widget is wrapped in .gps-hidden so the CSS scoped selector
+        # hides only this iframe — the folium map and searchbox stay visible.
         gps_data = None
+        st.markdown("<div class='gps-hidden'>", unsafe_allow_html=True)
         try:
             from streamlit_geolocation import streamlit_geolocation
             gps_data = streamlit_geolocation()
         except Exception:
             pass
+        st.markdown("</div>", unsafe_allow_html=True)
 
         st.markdown("## ⛽ OBYR Fuel")
         full_name = st.session_state.get("driver_full_name", "")
@@ -447,6 +618,24 @@ def main():
             for k in list(st.session_state.keys()):
                 del st.session_state[k]
             st.rerun()
+
+        # ── Theme toggle ───────────────────────────────────────────────
+        st.markdown("### 🎨 Theme")
+        theme_choice = st.radio(
+            "Theme mode",
+            ["System", "Dark", "Light"],
+            index={"system": 0, "dark": 1, "light": 2}.get(
+                st.session_state.get("theme_mode", "system"), 0
+            ),
+            horizontal=True,
+            key="theme_radio",
+            label_visibility="collapsed",
+        )
+        new_mode = theme_choice.lower()
+        if new_mode != st.session_state.get("theme_mode", "system"):
+            st.session_state["theme_mode"] = new_mode
+            st.rerun()
+
         st.divider()
 
         st.markdown("### 📍 Current Location")
@@ -553,18 +742,19 @@ def main():
     else:
         badge = ""
 
-    hcol1, hcol2 = st.columns([3, 1])
-    with hcol1:
-        st.markdown("## ⛽ OBYR Fuel — Triple Network")
-        st.markdown(
-            f" · From: **{clab}** · To: **{dlab}** "
-            f"{'· Corridor 🛣️' if has_dest else '· Radius 📡'} "
-            f"· Network: **{network}** {badge}",
-            unsafe_allow_html=True,
-        )
-    with hcol2:
-        if LOGO_PATH.exists():
-            st.image(str(LOGO_PATH), width=160)
+    st.markdown(
+        f"""
+        <div class='header-banner'>
+            <h1>⛽ OBYR Fuel — Triple Network</h1>
+            <div class='sub'>
+                From: <b>{clab}</b> &nbsp;·&nbsp; To: <b>{dlab}</b>
+                &nbsp;·&nbsp; {'Corridor 🛣️' if has_dest else 'Radius 📡'}
+                &nbsp;·&nbsp; Network: <b>{network}</b> {badge}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     _stale_banner(meta)
 

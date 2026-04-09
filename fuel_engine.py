@@ -295,40 +295,53 @@ def get_route_polyline(
 
     Returns None if the API call fails — callers fall back to straight-line.
     """
-    params = {
+    base_params = {
         "origin": f"{origin_lat},{origin_lon}",
         "destination": f"{dest_lat},{dest_lon}",
         "mode": "driving",
         "region": "ca",                  # bias to Canada
-        "avoid": "ferries|tolls",        # stay on free Canadian highways
         "key": api_key,
     }
 
     # Insert a Canadian waypoint if needed to prevent US routing
     waypoint = _canada_waypoints(origin_lat, origin_lon, dest_lat, dest_lon)
     if waypoint:
-        params["waypoints"] = waypoint
+        base_params["waypoints"] = waypoint
 
-    try:
-        resp = requests.get(DIRECTIONS_URL, params=params, timeout=10)
-        resp.raise_for_status()
-        data = resp.json()
+    # Try progressively less restrictive variants. The previous version forced
+    # avoid=ferries|tolls which broke routes into PEI (Confederation Bridge is
+    # a toll) and along Ontario's 407, returning ZERO_RESULTS. We now try
+    # tolls-only first, then unrestricted, then drop the waypoint as a final
+    # fallback so that get_route_polyline almost always returns a real route.
+    attempts = [
+        {**base_params, "avoid": "tolls"},
+        dict(base_params),  # no avoid
+    ]
+    if waypoint:
+        no_wp = {k: v for k, v in base_params.items() if k != "waypoints"}
+        attempts.append(no_wp)
 
-        if data.get("status") != "OK":
-            return None
+    for params in attempts:
+        try:
+            resp = requests.get(DIRECTIONS_URL, params=params, timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
 
-        # Extract the overview polyline from the first route
-        encoded = data["routes"][0]["overview_polyline"]["points"]
-        points = _decode_polyline(encoded)
+            if data.get("status") != "OK" or not data.get("routes"):
+                continue
 
-        # Also get total route distance in km for metadata
-        legs = data["routes"][0]["legs"]
-        total_distance_m = sum(leg["distance"]["value"] for leg in legs)
+            encoded = data["routes"][0]["overview_polyline"]["points"]
+            points = _decode_polyline(encoded)
 
-        return points, total_distance_m / 1000.0
+            legs = data["routes"][0]["legs"]
+            total_distance_m = sum(leg["distance"]["value"] for leg in legs)
 
-    except Exception:
-        return None
+            return points, total_distance_m / 1000.0
+
+        except Exception:
+            continue
+
+    return None
 
 
 def _downsample_polyline(
@@ -446,6 +459,8 @@ def list_drive_files(folder_id: str = DRIVE_FOLDER_ID) -> List[dict]:
             fields="files(id, name, modifiedTime, mimeType)",
             orderBy="modifiedTime desc",
             pageSize=200,
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True,
         )
         .execute()
     )
@@ -671,7 +686,11 @@ def _download_usage_log() -> pd.DataFrame:
 
 
 def _upload_usage_log(df: pd.DataFrame) -> None:
-    """Upload the full usage_log DataFrame to Drive, overwriting the existing file."""
+    """
+    Upload the full usage_log DataFrame to Drive, overwriting the existing
+    file. Uses supportsAllDrives=True so it works on both My Drive and
+    Shared Drives. Silently swallows errors so analytics never breaks the UI.
+    """
     try:
         from googleapiclient.http import MediaIoBaseUpload
         service = get_drive_service_rw()
@@ -687,12 +706,14 @@ def _upload_usage_log(df: pd.DataFrame) -> None:
             service.files().update(
                 fileId=file_id,
                 media_body=media,
+                supportsAllDrives=True,
             ).execute()
         else:
             # Create new file in root folder
             service.files().create(
                 body={"name": _USAGE_LOG_FILENAME, "parents": [DRIVE_FOLDER_ID]},
                 media_body=media,
+                supportsAllDrives=True,
             ).execute()
     except Exception:
         pass
