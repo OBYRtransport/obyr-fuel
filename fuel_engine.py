@@ -710,12 +710,12 @@ def _upload_usage_log(df: pd.DataFrame) -> None:
         ).execute()
         print(f"[ANALYTICS] Updated usage_log.csv (id={file_id}, rows={len(df)})", flush=True)
     else:
-        result = service.files().create(
-            body={"name": _USAGE_LOG_FILENAME, "parents": [DRIVE_FOLDER_ID]},
-            media_body=media,
-            supportsAllDrives=True,
-        ).execute()
-        print(f"[ANALYTICS] Created usage_log.csv (id={result.get('id')}, rows={len(df)})", flush=True)
+        raise RuntimeError(
+            "usage_log.csv does not exist in Google Drive. "
+            "Service accounts cannot create files (no storage quota). "
+            "Please upload an empty usage_log.csv with headers to the "
+            f"Drive folder {DRIVE_FOLDER_ID} manually."
+        )
 
 
 def log_event(
