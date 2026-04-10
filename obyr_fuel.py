@@ -532,11 +532,12 @@ def do_login():
                 st.session_state.driver_name = str(username).strip()
                 st.session_state.driver_full_name = get_driver_full_name(username)
                 st.session_state.driver_role = get_driver_role(username)
-                log_event(
-                    username=str(username).strip(),
-                    full_name=st.session_state.driver_full_name,
-                    event="login",
-                )
+                if st.session_state.driver_role != "admin":
+                    log_event(
+                        username=str(username).strip(),
+                        full_name=st.session_state.driver_full_name,
+                        event="login",
+                    )
                 st.rerun()
             else:
                 time.sleep(0.6)
@@ -702,15 +703,16 @@ def main():
     _log_key = f"_logged_{clat}_{clon}_{dlat}_{dlon}_{network}"
     if _log_key not in st.session_state:
         st.session_state[_log_key] = True
-        log_event(
-            username=st.session_state.driver_name,
-            full_name=st.session_state.get("driver_full_name", ""),
-            event="search",
-            origin_label=clab,
-            dest_label=dlab if dlat else "",
-            network=network,
-            route_km=meta.get("route_distance_km", 0.0),
-        )
+        if st.session_state.get("driver_role") != "admin":
+            log_event(
+                username=st.session_state.driver_name,
+                full_name=st.session_state.get("driver_full_name", ""),
+                event="search",
+                origin_label=clab,
+                dest_label=dlab if dlat else "",
+                network=network,
+                route_km=meta.get("route_distance_km", 0.0),
+            )
 
     # Fix 3: one polyline fetch, reused everywhere
     polyline_pts  = None
