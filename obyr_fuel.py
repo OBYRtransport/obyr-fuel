@@ -138,6 +138,17 @@ html, body, [class*="css"], .stApp {
     text-transform: uppercase;
     font-weight: 700;
 }
+/* Sidebar buttons (Logout, Refresh Prices) — visible on dark bg */
+[data-testid="stSidebar"] button {
+    color: #e2e8f0 !important;
+    border: 1px solid #334155 !important;
+    background: rgba(255,255,255,0.05) !important;
+}
+[data-testid="stSidebar"] button:hover {
+    background: rgba(255,255,255,0.15) !important;
+    border-color: #60a5fa !important;
+    color: #ffffff !important;
+}
 
 /* ── Metrics — card style ──────────────────────────────────────────── */
 [data-testid="metric-container"] {
@@ -256,11 +267,19 @@ footer { visibility: hidden; }
     z-index: 999999 !important;
 }
 
-/* ── Geolocation widget hide — SCOPED ──────────────────────────────
-   Hide the entire gps-hidden wrapper so the geolocation widget's
-   compass icon, input bar, and iframe are all invisible. The folium
-   map and streamlit-searchbox live outside this wrapper. */
-.gps-hidden {
+/* ── Geolocation widget hide ───────────────────────────────────────
+   Target the geolocation iframe by its title attribute. The wrapper
+   div approach doesn't work because Streamlit renders each component
+   as a sibling, not inside the markdown div. */
+[data-testid="stSidebar"] iframe[title="streamlit_geolocation.streamlit_geolocation"] {
+    display: none !important;
+    height: 0 !important;
+}
+[data-testid="stSidebar"] iframe[title="streamlit_geolocation.streamlit_geolocation"] ~ * {
+    /* no-op placeholder */
+}
+/* Also hide the stCustomComponentV1 wrapper that holds the geolocation widget */
+[data-testid="stSidebar"] [data-testid="stCustomComponentV1"]:has(iframe[title="streamlit_geolocation.streamlit_geolocation"]) {
     display: none !important;
     height: 0 !important;
     overflow: hidden !important;
