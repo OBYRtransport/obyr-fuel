@@ -8,8 +8,9 @@ V7.5 (Debug fixes):
   2. Map & searchbox rendering fixed — the GPS iframe hide selector was
      nuking ALL custom components (folium map, streamlit-searchbox).
      Now scoped to a unique wrapper so only the GPS widget is hidden.
-  3. Theme toggle added — System / Dark / Light, persisted in session
-     state, applied via CSS variables over the whole app.
+  3. Theme — locked to Streamlit light theme via .streamlit/config.toml.
+     Custom CSS only layers on top (sidebar, header, cards, badges);
+     Streamlit's own components use its native theme for legibility.
   4. Directions fixed — dropped overly aggressive avoid=ferries|tolls
      that was failing routes into PEI and on toll-road corridors; kept
      Canadian waypoint biasing so routes stay in Canada.
@@ -98,234 +99,172 @@ PLACES_DETAILS_URL      = "https://maps.googleapis.com/maps/api/place/details/js
 
 def _inject_theme_css(mode: str = "system"):
     """
-    Inject theme-aware CSS. Supports 'system', 'dark', 'light'.
-    'system' uses a @media (prefers-color-scheme) block so it auto-follows
-    the OS/browser setting. 'dark' and 'light' force the palette.
+    Inject cosmetic CSS that layers on top of Streamlit's built-in light
+    theme (set via .streamlit/config.toml). Only styles elements we
+    directly control — sidebar, header banner, metric cards, warnings,
+    badges, and the login heading. Streamlit's own components (dataframes,
+    tabs, inputs) are left to its native theme engine for legibility.
     """
-    light_vars = """
-        --bg: #f8fafc;  --surface: #ffffff;  --surface-2: #f1f5f9;
-        --border: #e2e8f0;
-        --text: #0f172a;  --text-muted: #64748b;
-        --accent: #2563eb;  --accent-2: #1d4ed8;
-        --sidebar-bg: #0f172a;  --sidebar-text: #e2e8f0;
-        --sidebar-heading: #f8fafc;  --sidebar-muted: #94a3b8;
-        --metric-bg: #ffffff;  --metric-border: #e2e8f0;
-        --metric-label: #64748b;  --metric-value: #0f172a;
-        --warning-bg: #fef3c7;  --warning-bar: #f59e0b;  --warning-text: #92400e;
-    """
-    dark_vars = """
-        --bg: #0b1120;  --surface: #111827;  --surface-2: #1e293b;
-        --border: #1f2937;
-        --text: #f1f5f9;  --text-muted: #94a3b8;
-        --accent: #60a5fa;  --accent-2: #3b82f6;
-        --sidebar-bg: #0a0f1c;  --sidebar-text: #e2e8f0;
-        --sidebar-heading: #f8fafc;  --sidebar-muted: #94a3b8;
-        --metric-bg: #111827;  --metric-border: #1f2937;
-        --metric-label: #94a3b8;  --metric-value: #f8fafc;
-        --warning-bg: #3b2f12;  --warning-bar: #f59e0b;  --warning-text: #fde68a;
-    """
-    if mode == "dark":
-        root_block = f":root {{ {dark_vars} }}"
-    elif mode == "light":
-        root_block = f":root {{ {light_vars} }}"
-    else:  # system — follow prefers-color-scheme
-        root_block = (
-            f":root {{ {light_vars} }}"
-            f"@media (prefers-color-scheme: dark) {{ :root {{ {dark_vars} }} }}"
-        )
-
-    st.markdown(f"""
+    st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
-{root_block}
 
-html, body, [class*="css"], .stApp {{
+/* ── Base font only — let Streamlit handle bg & text colours ───────── */
+html, body, [class*="css"], .stApp {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    background: var(--bg) !important;
-    color: var(--text);
-}}
-.stApp,
-[data-testid="stAppViewContainer"],
-[data-testid="stMain"],
-[data-testid="stMainBlockContainer"],
-[data-testid="stHeader"],
-section.main,
-.main,
-.block-container {{
-    background: var(--bg) !important;
-    color: var(--text) !important;
-}}
-.stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6,
-.stApp p, .stApp label, .stApp span:not([data-baseweb]) {{
-    color: var(--text) !important;
-}}
-/* Tables / dataframes — force cells to follow theme */
-[data-testid="stDataFrame"],
-[data-testid="stDataFrame"] div,
-[data-testid="stTable"],
-[data-testid="stTable"] td,
-[data-testid="stTable"] th {{
-    background-color: var(--surface) !important;
-    color: var(--text) !important;
-}}
-.stMarkdown, .stText {{ color: var(--text) !important; }}
-a, a:visited {{ color: var(--accent); }}
+}
 
-/* ── Sidebar ────────────────────────────────────────────────────────── */
-[data-testid="stSidebar"] {{
-    background: var(--sidebar-bg) !important;
-    color: var(--sidebar-text) !important;
-    border-right: 1px solid var(--border);
-}}
+/* ── Sidebar — dark navy ───────────────────────────────────────────── */
+[data-testid="stSidebar"] {
+    background: #0f172a !important;
+    color: #e2e8f0 !important;
+    border-right: 1px solid #1e293b;
+}
 [data-testid="stSidebar"] label,
 [data-testid="stSidebar"] .stMarkdown,
 [data-testid="stSidebar"] .stRadio label,
 [data-testid="stSidebar"] p,
 [data-testid="stSidebar"] span,
-[data-testid="stSidebar"] div {{
-    color: var(--sidebar-text) !important;
-}}
+[data-testid="stSidebar"] div {
+    color: #e2e8f0 !important;
+}
 [data-testid="stSidebar"] h1,
 [data-testid="stSidebar"] h2,
 [data-testid="stSidebar"] h3,
-[data-testid="stSidebar"] h4 {{
-    color: var(--sidebar-heading) !important;
+[data-testid="stSidebar"] h4 {
+    color: #f8fafc !important;
     font-size: 0.8rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     font-weight: 700;
-}}
+}
 
-/* ── Metrics — modern card style ────────────────────────────────────── */
-[data-testid="metric-container"] {{
-    background: var(--metric-bg);
-    border: 1px solid var(--metric-border);
+/* ── Metrics — card style ──────────────────────────────────────────── */
+[data-testid="metric-container"] {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     border-radius: 14px;
     padding: 1.1rem 1.3rem;
     box-shadow: 0 1px 3px rgba(15,23,42,0.06), 0 1px 2px rgba(15,23,42,0.04);
     transition: box-shadow 0.2s ease, transform 0.2s ease;
-}}
-[data-testid="metric-container"]:hover {{
+}
+[data-testid="metric-container"]:hover {
     box-shadow: 0 4px 12px rgba(15,23,42,0.08), 0 2px 4px rgba(15,23,42,0.04);
-}}
-[data-testid="metric-container"] label {{
-    color: var(--metric-label) !important;
+}
+[data-testid="metric-container"] label {
+    color: #64748b !important;
     font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     font-weight: 600;
-}}
-[data-testid="metric-container"] [data-testid="stMetricValue"] {{
+}
+[data-testid="metric-container"] [data-testid="stMetricValue"] {
     font-family: 'DM Mono', monospace;
     font-size: 1.6rem;
-    color: var(--metric-value);
+    color: #0f172a;
     font-weight: 600;
-}}
+}
 
-/* ── Header banner ──────────────────────────────────────────────────── */
-.header-banner {{
-    background: linear-gradient(135deg, var(--accent-2) 0%, var(--accent) 100%);
+/* ── Header banner ─────────────────────────────────────────────────── */
+.header-banner {
+    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
     color: #ffffff;
     padding: 1.4rem 1.8rem;
     border-radius: 16px;
     margin-bottom: 1.2rem;
     box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
-}}
-.header-banner h1 {{
+}
+.header-banner h1 {
     color: #ffffff !important;
     margin: 0;
     font-size: 1.75rem;
     font-weight: 800;
     letter-spacing: -0.02em;
-}}
-.header-banner .sub {{
+}
+.header-banner .sub {
     color: rgba(255,255,255,0.9);
     font-size: 0.92rem;
     margin-top: 0.35rem;
-}}
+}
 
-/* ── Tables & tabs ──────────────────────────────────────────────────── */
-.stDataFrame, [data-testid="stTable"] {{
+/* ── Tables & tabs ─────────────────────────────────────────────────── */
+.stDataFrame, [data-testid="stTable"] {
     border-radius: 12px;
     overflow: hidden;
-}}
-.stTabs [data-baseweb="tab-list"] {{
+}
+.stTabs [data-baseweb="tab-list"] {
     gap: 4px;
-}}
-.stTabs [data-baseweb="tab"] {{
+}
+.stTabs [data-baseweb="tab"] {
     border-radius: 10px 10px 0 0;
     padding: 0.55rem 1rem;
     font-weight: 600;
-}}
+}
 
-/* ── Warnings & badges ──────────────────────────────────────────────── */
-.stale-warning {{
-    background: var(--warning-bg);
-    border-left: 4px solid var(--warning-bar);
+/* ── Warnings & badges ─────────────────────────────────────────────── */
+.stale-warning {
+    background: #fef3c7;
+    border-left: 4px solid #f59e0b;
     border-radius: 8px;
     padding: 0.7rem 1.1rem;
     font-size: 0.88rem;
-    color: var(--warning-text);
+    color: #92400e;
     margin-bottom: 0.6rem;
-}}
-.route-badge {{
+}
+.route-badge {
     display: inline-block;
     padding: 4px 12px;
     border-radius: 20px;
     font-size: 0.75rem;
     font-weight: 600;
     margin-left: 8px;
-}}
-.route-google   {{ background: #dcfce7; color: #166534; }}
-.route-fallback {{ background: #fef9c3; color: #854d0e; }}
-.route-radius   {{ background: #dbeafe; color: #1e40af; }}
+}
+.route-google   { background: #dcfce7; color: #166534; }
+.route-fallback { background: #fef9c3; color: #854d0e; }
+.route-radius   { background: #dbeafe; color: #1e40af; }
 
-.login-heading  {{ font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; color: var(--text); }}
-.footer {{
+.login-heading  { font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; }
+.footer {
     font-size: 0.72rem;
-    color: var(--text-muted);
+    color: #64748b;
     text-align: center;
     padding: 1.5rem 0 0.5rem;
-}}
+}
 
 /* Hide Streamlit chrome — but KEEP the header visible so the sidebar
    expand/collapse toggle (which lives inside stHeader) stays usable. */
-[data-testid="stSkeleton"] {{ display: none !important; }}
-#MainMenu {{ visibility: hidden; }}
-footer {{ visibility: hidden; }}
-[data-testid="stHeader"] {{
+[data-testid="stSkeleton"] { display: none !important; }
+#MainMenu { visibility: hidden; }
+footer { visibility: hidden; }
+[data-testid="stHeader"] {
     background: transparent !important;
     height: 3rem;
-}}
+}
 [data-testid="stHeader"] [data-testid="stDecoration"],
 [data-testid="stHeader"] [data-testid="stStatusWidget"],
-[data-testid="stToolbar"] {{
+[data-testid="stToolbar"] {
     visibility: hidden;
-}}
+}
 /* Make absolutely sure the sidebar collapse/expand controls are visible */
 [data-testid="stSidebarCollapsedControl"],
 [data-testid="collapsedControl"],
 [data-testid="stExpandSidebarButton"],
-[data-testid="stSidebarCollapseButton"] {{
+[data-testid="stSidebarCollapseButton"] {
     visibility: visible !important;
     display: flex !important;
     opacity: 1 !important;
     z-index: 999999 !important;
-}}
+}
 
-/* ── Geolocation widget hide — SCOPED ───────────────────────────────
-   Previously a global [data-testid=stCustomComponentV1] iframe display:none
-   was nuking the folium map and streamlit-searchbox. Now we only hide
-   iframes inside the .gps-hidden wrapper div. */
-.gps-hidden {{
-    position: absolute !important;
-    left: -9999px !important;
-    top: -9999px !important;
-    width: 1px !important;
-    height: 1px !important;
+/* ── Geolocation widget hide — SCOPED ──────────────────────────────
+   Only hide iframes inside the .gps-hidden wrapper div so the
+   folium map and streamlit-searchbox stay visible. */
+.gps-hidden [data-testid="stCustomComponentV1"],
+.gps-hidden iframe {
+    display: none !important;
+    height: 0 !important;
     overflow: hidden !important;
-    pointer-events: none !important;
-}}
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -333,7 +272,7 @@ footer {{ visibility: hidden; }}
 # Apply the current theme immediately (before any UI is rendered). The
 # actual radio control lives in the sidebar and triggers a rerun which
 # re-injects this CSS with the new mode.
-_inject_theme_css(st.session_state.get("theme_mode", "system"))
+_inject_theme_css()
 
 
 def _init_session():
@@ -662,23 +601,6 @@ def main():
         if st.button("Logout", use_container_width=True, key="btn_logout"):
             for k in list(st.session_state.keys()):
                 del st.session_state[k]
-            st.rerun()
-
-        # ── Theme toggle ───────────────────────────────────────────────
-        st.markdown("### 🎨 Theme")
-        theme_choice = st.radio(
-            "Theme mode",
-            ["System", "Dark", "Light"],
-            index={"system": 0, "dark": 1, "light": 2}.get(
-                st.session_state.get("theme_mode", "system"), 0
-            ),
-            horizontal=True,
-            key="theme_radio",
-            label_visibility="collapsed",
-        )
-        new_mode = theme_choice.lower()
-        if new_mode != st.session_state.get("theme_mode", "system"):
-            st.session_state["theme_mode"] = new_mode
             st.rerun()
 
         st.divider()
