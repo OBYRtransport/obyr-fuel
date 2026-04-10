@@ -658,12 +658,16 @@ def get_drive_service_rw():
 
 def _get_usage_log_file_id() -> Optional[str]:
     """Return the Drive file ID of usage_log.csv in the root folder, or None."""
+    import logging
+    _log = logging.getLogger("obyr_fuel.analytics")
     try:
         for item in list_drive_files(DRIVE_FOLDER_ID):
             if item["name"].strip().lower() == _USAGE_LOG_FILENAME:
+                _log.info("Found usage_log.csv → id=%s", item["id"])
                 return item["id"]
-    except Exception:
-        pass
+        _log.warning("usage_log.csv not found in Drive folder %s", DRIVE_FOLDER_ID)
+    except Exception as exc:
+        _log.error("_get_usage_log_file_id FAILED: %s", exc)
     return None
 
 
@@ -689,34 +693,33 @@ def _upload_usage_log(df: pd.DataFrame) -> None:
     """
     Upload the full usage_log DataFrame to Drive, overwriting the existing
     file. Uses supportsAllDrives=True so it works on both My Drive and
-    Shared Drives. Silently swallows errors so analytics never breaks the UI.
+    Shared Drives. Raises on failure so the caller can log it.
     """
-    try:
-        from googleapiclient.http import MediaIoBaseUpload
-        service = get_drive_service_rw()
-        csv_bytes = df.to_csv(index=False).encode("utf-8")
-        media = MediaIoBaseUpload(
-            io.BytesIO(csv_bytes),
-            mimetype="text/csv",
-            resumable=False,
-        )
-        file_id = _get_usage_log_file_id()
-        if file_id:
-            # Update existing file
-            service.files().update(
-                fileId=file_id,
-                media_body=media,
-                supportsAllDrives=True,
-            ).execute()
-        else:
-            # Create new file in root folder
-            service.files().create(
-                body={"name": _USAGE_LOG_FILENAME, "parents": [DRIVE_FOLDER_ID]},
-                media_body=media,
-                supportsAllDrives=True,
-            ).execute()
-    except Exception:
-        pass
+    import logging
+    _log = logging.getLogger("obyr_fuel.analytics")
+    from googleapiclient.http import MediaIoBaseUpload
+    service = get_drive_service_rw()
+    csv_bytes = df.to_csv(index=False).encode("utf-8")
+    media = MediaIoBaseUpload(
+        io.BytesIO(csv_bytes),
+        mimetype="text/csv",
+        resumable=False,
+    )
+    file_id = _get_usage_log_file_id()
+    if file_id:
+        service.files().update(
+            fileId=file_id,
+            media_body=media,
+            supportsAllDrives=True,
+        ).execute()
+        _log.info("Updated usage_log.csv (id=%s, rows=%d)", file_id, len(df))
+    else:
+        result = service.files().create(
+            body={"name": _USAGE_LOG_FILENAME, "parents": [DRIVE_FOLDER_ID]},
+            media_body=media,
+            supportsAllDrives=True,
+        ).execute()
+        _log.info("Created usage_log.csv (id=%s, rows=%d)", result.get("id"), len(df))
 
 
 def log_event(
@@ -729,6 +732,8 @@ def log_event(
     route_km: float = 0.0,
 ) -> None:
     """Append one row to usage_log.csv in Google Drive. Never raises."""
+    import logging
+    _log = logging.getLogger("obyr_fuel.analytics")
     now = datetime.now()
     new_row = pd.DataFrame([{
         "timestamp":    now.strftime("%Y-%m-%d %H:%M:%S"),
@@ -746,8 +751,9 @@ def log_event(
         df = _download_usage_log()
         df = pd.concat([df, new_row], ignore_index=True)
         _upload_usage_log(df)
-    except Exception:
-        pass
+        _log.info("log_event OK: user=%s event=%s", username, event)
+    except Exception as exc:
+        _log.error("log_event FAILED: user=%s event=%s error=%s", username, event, exc)
 
 
 def read_analytics() -> pd.DataFrame:
