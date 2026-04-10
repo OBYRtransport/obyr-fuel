@@ -257,10 +257,10 @@ footer { visibility: hidden; }
 }
 
 /* ── Geolocation widget hide — SCOPED ──────────────────────────────
-   Only hide iframes inside the .gps-hidden wrapper div so the
-   folium map and streamlit-searchbox stay visible. */
-.gps-hidden [data-testid="stCustomComponentV1"],
-.gps-hidden iframe {
+   Hide the entire gps-hidden wrapper so the geolocation widget's
+   compass icon, input bar, and iframe are all invisible. The folium
+   map and streamlit-searchbox live outside this wrapper. */
+.gps-hidden {
     display: none !important;
     height: 0 !important;
     overflow: hidden !important;
