@@ -658,16 +658,14 @@ def get_drive_service_rw():
 
 def _get_usage_log_file_id() -> Optional[str]:
     """Return the Drive file ID of usage_log.csv in the root folder, or None."""
-    import logging
-    _log = logging.getLogger("obyr_fuel.analytics")
     try:
         for item in list_drive_files(DRIVE_FOLDER_ID):
             if item["name"].strip().lower() == _USAGE_LOG_FILENAME:
-                _log.info("Found usage_log.csv → id=%s", item["id"])
+                print(f"[ANALYTICS] Found usage_log.csv → id={item['id']}", flush=True)
                 return item["id"]
-        _log.warning("usage_log.csv not found in Drive folder %s", DRIVE_FOLDER_ID)
+        print(f"[ANALYTICS] usage_log.csv not found in folder {DRIVE_FOLDER_ID}", flush=True)
     except Exception as exc:
-        _log.error("_get_usage_log_file_id FAILED: %s", exc)
+        print(f"[ANALYTICS] _get_usage_log_file_id FAILED: {exc}", flush=True)
     return None
 
 
@@ -695,8 +693,6 @@ def _upload_usage_log(df: pd.DataFrame) -> None:
     file. Uses supportsAllDrives=True so it works on both My Drive and
     Shared Drives. Raises on failure so the caller can log it.
     """
-    import logging
-    _log = logging.getLogger("obyr_fuel.analytics")
     from googleapiclient.http import MediaIoBaseUpload
     service = get_drive_service_rw()
     csv_bytes = df.to_csv(index=False).encode("utf-8")
@@ -712,14 +708,14 @@ def _upload_usage_log(df: pd.DataFrame) -> None:
             media_body=media,
             supportsAllDrives=True,
         ).execute()
-        _log.info("Updated usage_log.csv (id=%s, rows=%d)", file_id, len(df))
+        print(f"[ANALYTICS] Updated usage_log.csv (id={file_id}, rows={len(df)})", flush=True)
     else:
         result = service.files().create(
             body={"name": _USAGE_LOG_FILENAME, "parents": [DRIVE_FOLDER_ID]},
             media_body=media,
             supportsAllDrives=True,
         ).execute()
-        _log.info("Created usage_log.csv (id=%s, rows=%d)", result.get("id"), len(df))
+        print(f"[ANALYTICS] Created usage_log.csv (id={result.get('id')}, rows={len(df)})", flush=True)
 
 
 def log_event(
@@ -732,8 +728,7 @@ def log_event(
     route_km: float = 0.0,
 ) -> None:
     """Append one row to usage_log.csv in Google Drive. Never raises."""
-    import logging
-    _log = logging.getLogger("obyr_fuel.analytics")
+    import traceback
     now = datetime.now()
     new_row = pd.DataFrame([{
         "timestamp":    now.strftime("%Y-%m-%d %H:%M:%S"),
@@ -748,12 +743,16 @@ def log_event(
         "route_km":     round(float(route_km or 0), 1),
     }])
     try:
+        print(f"[ANALYTICS] log_event called: user={username} event={event}", flush=True)
         df = _download_usage_log()
+        print(f"[ANALYTICS] existing log rows: {len(df)}", flush=True)
         df = pd.concat([df, new_row], ignore_index=True)
         _upload_usage_log(df)
-        _log.info("log_event OK: user=%s event=%s", username, event)
+        print(f"[ANALYTICS] log_event OK: user={username} event={event} total_rows={len(df)}", flush=True)
     except Exception as exc:
-        _log.error("log_event FAILED: user=%s event=%s error=%s", username, event, exc)
+        print(f"[ANALYTICS] log_event FAILED: user={username} event={event}", flush=True)
+        print(f"[ANALYTICS] Error: {exc}", flush=True)
+        traceback.print_exc()
 
 
 def read_analytics() -> pd.DataFrame:
