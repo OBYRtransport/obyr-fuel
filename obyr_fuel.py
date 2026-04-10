@@ -144,8 +144,31 @@ html, body, [class*="css"], .stApp {{
     background: var(--bg) !important;
     color: var(--text);
 }}
-.stApp {{ background: var(--bg) !important; }}
-h1, h2, h3, h4, h5, h6, p, label, span, div {{ color: var(--text); }}
+.stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"],
+[data-testid="stMainBlockContainer"],
+[data-testid="stHeader"],
+section.main,
+.main,
+.block-container {{
+    background: var(--bg) !important;
+    color: var(--text) !important;
+}}
+.stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6,
+.stApp p, .stApp label, .stApp span:not([data-baseweb]) {{
+    color: var(--text) !important;
+}}
+/* Tables / dataframes — force cells to follow theme */
+[data-testid="stDataFrame"],
+[data-testid="stDataFrame"] div,
+[data-testid="stTable"],
+[data-testid="stTable"] td,
+[data-testid="stTable"] th {{
+    background-color: var(--surface) !important;
+    color: var(--text) !important;
+}}
+.stMarkdown, .stText {{ color: var(--text) !important; }}
 a, a:visited {{ color: var(--accent); }}
 
 /* ── Sidebar ────────────────────────────────────────────────────────── */
@@ -294,11 +317,14 @@ footer {{ visibility: hidden; }}
    Previously a global [data-testid=stCustomComponentV1] iframe display:none
    was nuking the folium map and streamlit-searchbox. Now we only hide
    iframes inside the .gps-hidden wrapper div. */
-.gps-hidden [data-testid="stCustomComponentV1"],
-.gps-hidden iframe {{
-    display: none !important;
-    height: 0 !important;
+.gps-hidden {{
+    position: absolute !important;
+    left: -9999px !important;
+    top: -9999px !important;
+    width: 1px !important;
+    height: 1px !important;
     overflow: hidden !important;
+    pointer-events: none !important;
 }}
 </style>
 """, unsafe_allow_html=True)
