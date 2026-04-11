@@ -729,7 +729,8 @@ def log_event(
 ) -> None:
     """Append one row to usage_log.csv in Google Drive. Never raises."""
     import traceback
-    now = datetime.now()
+    from zoneinfo import ZoneInfo
+    now = datetime.now(ZoneInfo("America/Toronto"))
     new_row = pd.DataFrame([{
         "timestamp":    now.strftime("%Y-%m-%d %H:%M:%S"),
         "date":         now.strftime("%Y-%m-%d"),
